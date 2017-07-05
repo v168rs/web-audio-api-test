@@ -1,0 +1,32 @@
+<!DOCTYPE HTML>
+<style>
+    body {
+        font-family: "Calibri";
+        color: #aaa;
+    }
+</style>
+<body id="body">
+    <a href="geo.html">Cesium/geo</a><br>
+    <button id="start_btn">Start Synths</button>
+    <button id="mute_btn">Mute Synths</button>
+    <button id="unmute_btn">Unmute Synths</button>
+    <button id="convolve_btn">Add a convolver</button>
+    <button id="sin_btn">Make the first oscillator sin</button>
+    <button id="sqr_btn">Make the first oscillator square</button>
+    <button id="saw_btn">Make the first oscillator sawtooth</button>
+    <button id="tri_btn">Make the first oscillator triangle</button>
+    <button id="rand_gen_btn">Play a random tune</button>
+    <button id="data_pic_btn">Change the picture</button>
+    <button id="start_a_btn">Start Anthems</button>
+    <button id="mute_a_btn">Mute Anthems</button>
+    <button id="unmute_a_btn">Unmute Anthems</button>
+    <input id="gen_root" type="number" value="53">
+    <!--<input type="range" id="distort_slider" max="0.1" min="0" step="0.01" defaultValue="0.5">-->
+    <div id="bus_display" style="pointer-events:none;"></div>
+    
+<div style="margin-top:50px">
+    <canvas id="data_canvas" width="3600" height="1800" style="z-index:-2; border:0px; solid #AAA; position:absolute; left:0; top:0;">Canvas didn't work!</canvas>
+    <canvas id="display_canvas" width="3600" height="1800" style="z-index:-1; margin-bottom:0px; border:0px; solid #AAA; position:absolute; left:0; top:0;">Canvas didn't work!</canvas>
+</div>
+</body>
+<script src="js/app.js"></script>
