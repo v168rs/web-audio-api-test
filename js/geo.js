@@ -110,6 +110,7 @@ function create_samples_with_loc(){
 
         panner.refDistance = 300;
         panner.distanceModel = "exponential";
+        //Orientation
         panner.setOrientation(cartes[3], cartes[4], cartes[5]);
         panner.coneInnerAngle = 60;
         panner.coneOuterAngle = 100;
