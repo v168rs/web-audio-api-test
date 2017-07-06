@@ -12,8 +12,9 @@ function load_sample(sample, buffer_receiver) {
     getSound.send();
 } 
 
+//add relative xyz values to this afterwards. samp/lat/long
 var geo_audio = [
-    ["snd/usa.mp3", 38.907192, -77.036871], //http://www.music.army.mil/music/nationalanthem/
+    ["snd/usa.mp3", 38.8977, -77.0365], //http://www.music.army.mil/music/nationalanthem/
     ["snd/canada.mp3", 45.421530, -75.697193],
     ["snd/china.mp3", 39.904200, 116.407396],
     ["snd/japan.mp3", 35.689487, 139.691706],
@@ -36,6 +37,7 @@ var geo_audio = [
 
 var geo_buses = [];
 var listening_buses = [];
+var cur_pos = [0, 0];
 var context;
 var convolver;
 
@@ -60,6 +62,35 @@ function init() {
     
 }
 
+function deg2rad(x) {
+    return x/180 * Math.PI;
+}
+
+//A function used for calculating the reference values for audio position and orientation.
+function set_samples_loc(arr){ 
+    var loc_lat = deg2rad(arr[1]), //y
+        loc_long = deg2rad(arr[2]); //x
+        s_maj = 6378137,
+        s_min = 6356752.314245,
+        eccentricity = 0.0818191908426215,
+        normal = 0;
+        h = 0;
+    var ret = [];
+    normal = (s_maj/(Math.sqrt(1 - eccentricity*eccentricity*Math.sin(loc_lat)*Math.sin(loc_lat))));
+    ret.push((normal + h) * Math.cos(loc_lat) * Math.cos(loc_long));
+    ret.push((normal + h) * Math.cos(loc_lat) * Math.sin(loc_long));
+    ret.push((normal + h) * (1 - eccentricity * eccentricity) * Math.sin(loc_lat));
+    
+    //Orientation
+    //Cesium
+    var nvec = {};
+    Cesium.Ellipsoid.WGS84.geodeticSurfaceNormalCartographic(new Cesium.Cartographic(loc_long, loc_lat, h), nvec);
+    ret.push(nvec["x"]);
+    ret.push(nvec["y"]);
+    ret.push(nvec["z"]);
+    return ret;
+}
+
 function create_samples_with_loc(){
     geo_audio.forEach(function(arr){
         var geo_bus = [];
@@ -72,9 +103,17 @@ function create_samples_with_loc(){
         panner.panningModel = "HRTF";
         //Positioning?
         //cesium.js
-        
+        var cartes = set_samples_loc(arr);
+        panner.setPosition(cartes[0], cartes[1], cartes[2]);
         sampler.connect(panner);
         sampler.start();
+
+        panner.refDistance = 300;
+        panner.distanceModel = "exponential";
+        panner.setOrientation(cartes[3], cartes[4], cartes[5]);
+        panner.coneInnerAngle = 60;
+        panner.coneOuterAngle = 100;
+        panner.coneOuterGain = 0.1; 
         panner.connect(convolver);
         //For access:
         geo_bus.push(sampler);
@@ -83,24 +122,14 @@ function create_samples_with_loc(){
     });
 }
 
-
-
-/*everything below this line hasn't been fixed and was just copypasted from app.js
-//Very expensive. TODO: Find a way to pipe all the anthem buses into a convolver instead?
-
-function update_geo_samples(listener_x, listener_y) {
-    var i;
-    for(i = 0; i < geo_buses.length; i++) {
-        
-        console.log("x" + (geo_audio[i][1] - listener_x));
-        console.log("y" + (listener_y - geo_audio[i][2]));
-        
-        
-        buses[geo_buses[i]][1][0].positionX.value = (geo_audio[i][3] - listener_x);
-        buses[geo_buses[i]][1][0].positionY.value = (listener_y - geo_audio[i][4]);
-        
-        //Hard-coded panner index
-    }
+function set_listener_loc(x, y, z, fx, fy, fz, ux, uy, uz) {
+    context.listener.setPosition(x, y, z);
+    context.listener.setOrientation(fx, fy, fz, ux, uy, uz);
 }
-//sample from rmutt at freesound.org
-*/
+
+//fine Cesium.js, you win
+init();
+create_samples_with_loc();
+var viewer = new Cesium.Viewer('cesiumContainer');
+var camera = viewer.camera;
+camera.changed.addEventListener(function() {set_listener_loc(camera.position["x"], camera.position["y"], camera.position["z"], camera.direction["x"], camera.direction["y"], camera.direction["z"], camera.up["x"], camera.up["y"], camera.up["z"]);});
