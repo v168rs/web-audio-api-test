@@ -933,6 +933,8 @@ body.onmousemove = function(e) {
     }
 
 //1022 514
+//https://drive.google.com/open?id=0B6_a4sq0zv4FSlBuc2JRN0Uzc28
+//Does NOT go in the img folder; goes in the root folder
 document.getElementById("data_pic_btn").onclick = function() {
     if(cur_img === "dec_01") {
         swapImages("jul_01.png", "jul_01_gs.png");
