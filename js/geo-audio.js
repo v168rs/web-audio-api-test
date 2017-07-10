@@ -1,7 +1,9 @@
 //Special system specifically for geotagged samples
 
+//Requires Cesium.js
 //National anthems (soundfile, lat, long, flagicon)
-var anthems = [
+var geo_audio_samples = {
+    anthems : [
         ["snd/usa.mp3", 38.8977, -77.0365, "img/us.png"],     //http://www.music.army.mil/music/nationalanthem/
         ["snd/canada.mp3", 45.421530, -75.697193, "img/ca.png"],
         ["snd/china.mp3", 39.904200, 116.407396, "img/cn.png"],
@@ -25,11 +27,23 @@ var anthems = [
         ["snd/czech_republic.mp3", 50.0755, 14.4378, "img/cz.png"],
         ["snd/south_korea.mp3", 37.5665, 126.9780, "img/kr.png"],
         ["snd/vietnam.mp3", 21.0278, 105.8342, "img/vn.png"],
-        ["snd/iran.mp3", 35.6892, 51.3890, "img/ir.png"]
+        ["snd/iran.mp3", 35.6892, 51.3890, "img/ir.png"],
+        ["snd/israel.mp3", 31.7683, 35.2137, "img/il.png"],
+        ["snd/algeria.mp3", 36.726017, 3.082667, "img/dz.png"],
+        ["snd/tanzania.mp3", -6.1630, 35.7516, "img/tz.png"],
+        ["snd/rwanda.mp3", -1.9706, 30.1044, "img/rw.png"],
+        ["snd/nigeria.mp3", 9.0765, 7.3986, "img/ng.png"],
+        ["snd/morocco.mp3", 33.9716, -6.8498, "img/ma.png"],
+        ["snd/botswana.mp3", -24.6282, 25.9231, "img/bw.png"],
+        ["snd/argentina.mp3", -34.6037, -58.3816, "img/ar.png"]
     //US Navy Band
     //https://web-beta.archive.org/web/20030827154715/http://www.navyband.navy.mil:80/anthems/all_countries.htm
     //MP3s are kept at https://drive.google.com/open?id=0B6_a4sq0zv4FRnFhajFJNkdRREU
-    ];
+    ],
+    enviro : [
+        ["snd/env/jfny.ogg", 41.7909607694, -74.9167156219]
+    ]
+}
 //Flags are kept at https://drive.google.com/open?id=0B6_a4sq0zv4FT0N2TUNwb3ZqNnc
 
 function load_sample(sample, buffer_receiver) {
@@ -50,7 +64,7 @@ var cur_pos = [0, 0];
 var context;
 var convolver;
 
-function init() {
+function geo_init() {
     var impulse = "snd/impulse.wav";
     context = new AudioContext();
     
@@ -105,7 +119,7 @@ function set_listener_loc(x, y, z, fx, fy, fz, ux, uy, uz) {
     context.listener.setOrientation(fx, fy, fz, ux, uy, uz);
 }
 
-init();
+geo_init();
 var viewer = new Cesium.Viewer('cesiumContainer');
 var camera = viewer.camera;
 camera.changed.addEventListener(function() {set_listener_loc(camera.position["x"], camera.position["y"], camera.position["z"], camera.direction["x"], camera.direction["y"], camera.direction["z"], camera.up["x"], camera.up["y"], camera.up["z"]);});
@@ -120,8 +134,8 @@ function place_billboard(bx, by, bz, b_img) {
     });
 }
 
-function create_samples_with_loc(geo_audio){
-    geo_audio.forEach(function(arr){
+function create_samples_with_loc(audio_selector = "anthems"){
+    geo_audio_samples[audio_selector].forEach(function(arr){
         var geo_bus = [];
         var sampler = context.createBufferSource();
         load_sample(arr[0], function(b) {
@@ -138,12 +152,13 @@ function create_samples_with_loc(geo_audio){
         sampler.start();
 
         panner.refDistance = 700;
-        panner.distanceModel = "exponential";
         //Orientation
         panner.setOrientation(cartes[3], cartes[4], cartes[5]);
-        panner.coneInnerAngle = 60;
-        panner.coneOuterAngle = 100;
-        panner.coneOuterGain = 0.1; 
+        panner.coneInnerAngle = 1;
+        panner.coneOuterAngle = 90;
+        panner.coneOuterGain = 0;
+        
+        //Make this optional?
         panner.connect(convolver);
         //For access:
         geo_bus.push(sampler);
@@ -153,13 +168,30 @@ function create_samples_with_loc(geo_audio){
         if (arr[3]) {
             place_billboard(cartes[0], cartes[1], cartes[2], arr[3]);
         }
+        else {
+            place_billboard(cartes[0], cartes[1], cartes[2], "img/xph.png");
+        }
     });
 }
 
-create_samples_with_loc(anthems);
+create_samples_with_loc("anthems");
+//Test of imagery layers
+//viewer.scene.imageryLayers.addImageryProvider(new Cesium.SingleTileImageryProvider({url: "jul_01.png"}));
 
-function change_sample_bank() {
+function change_sample_bank(audio_selector = "anthems") {
+    //clear geo_buses
     geo_buses.forEach(function(bus) {
-        //delet
+        bus[0].loop = false;
+        bus[0].disconnect();
+        bus[1].disconnect();
     });
+    geo_buses = [];
+    //clear icons
+    viewer.entities.removeAll();
+    create_samples_with_loc(audio_selector);
 }
+
+var selector = document.getElementById("selector")
+selector.addEventListener("change", function() {
+    change_sample_bank(selector.value);
+});
