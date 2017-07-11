@@ -4,7 +4,7 @@
 function create_temperature_synth(){
     var bus_num = create_new_bus(context.destination);
     var convolver = add_convolution(bus_num);
-    dry_wet(bus_num, 1, 20);
+    dry_wet(bus_num, 1, 5);
     var filter = add_filter(bus_num, "lowpass", 3000, 30);
     var mod1 = add_osc_modulator(bus_num, 0, 0, "frequency", 440, 5, 25)
     var mod2 = add_osc_modulator(bus_num, 0, 0, "frequency", 440, 3, 50)
@@ -16,7 +16,7 @@ function create_polyphonic_synth(){
     var bus_num = create_new_bus(context.destination);
     add_osc(bus_num);
     add_osc(bus_num);
-    add_convolution(bus_num);
+    //add_convolution(bus_num);
     add_osc_modulator(bus_num, 0, 0, "frequency", 440, 5, 80)
     add_osc_modulator(bus_num, 0, 1, "frequency", 440, 5, 80)
     add_osc_modulator(bus_num, 0, 2, "frequency", 440, 5, 80)
@@ -130,12 +130,14 @@ document.getElementById("start_a_btn").onclick = function() {
         start_bus(b);
         }
     document.getElementById("start_a_btn").disabled = true;}
+*/
 document.getElementById("mute_btn").onclick = function() {
     mute_bus(0);
     mute_bus(1);
     document.getElementById("unmute_btn").disabled = false;
     document.getElementById("mute_btn").disabled = true;
-                                                         }
+}
+/*
 document.getElementById("mute_a_btn").onclick = function() {
     var b;
     for (b = 2; b < buses.length; b++) {
@@ -143,7 +145,7 @@ document.getElementById("mute_a_btn").onclick = function() {
         }
     document.getElementById("unmute_a_btn").disabled = false;
     document.getElementById("mute_a_btn").disabled = true;
-                                                         }
+                                                        }
 document.getElementById("unmute_a_btn").onclick = function() {
     var b;
     for (b = 2; b < buses.length; b++) {
@@ -162,10 +164,6 @@ document.getElementById("convolve_btn").onclick = function() {
     add_convolution(0);
     document.getElementById("convolve_btn").disabled = true;}
 */
-document.getElementById("rand_gen_btn").onclick = function() {
-    var root = parseFloat(document.getElementById("gen_root").value);
-    playMarkovSequence(0, 0, 1, doMarkovSequence(root, maj_scale, 2, 8, true, 2, "I", 5), 0.3, 2.4)
-}
 
 document.getElementById("sin_btn").onclick = function() {
     change_osc(0, 0, 'sine');}
@@ -219,6 +217,15 @@ body.onmousemove = function(e) {
     soundMorph(map(cursorY, 0, 1800, -1, 1), buses[2][1][0].positionY, 0.1);
     */
     }
+
+//doMarkovSequence(root, scale, octaves, phrase_length, clean, tone_anchor, starting_chord, num_phrases, duration)
+body.onkeydown = function(e) {
+    if(e["key"] == "`") {
+        
+    playMarkovSequence(0, 0, 1, doMarkovSequence(parseFloat(document.getElementById("gen_root").value), document.getElementById("scale_selector").value, 2, document.getElementById("gen_n_phr").value, true, 2, document.getElementById("start_selector").value, document.getElementById("gen_phr").value, document.getElementById("gen_dur").value));
+    console.log(dissonance);
+    }
+}
 
 //1022 514
 //https://drive.google.com/open?id=0B6_a4sq0zv4FSlBuc2JRN0Uzc28

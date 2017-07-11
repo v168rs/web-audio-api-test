@@ -89,7 +89,7 @@ function deg2rad(x) {
     return x/180 * Math.PI;
 }
 
-//A function used for calculating the reference values for audio position and orientation. Returns array of 6 numbers with cartesian position and surface normal vector.
+//A function used for calculating the reference values for audio position and orientation. Returns array of 6 numbers with cartesian position and surface normal - I don't know how the math works
 function set_samples_loc(arr){ 
     var loc_lat = deg2rad(arr[1]), //y
         loc_long = deg2rad(arr[2]); //x
@@ -103,14 +103,9 @@ function set_samples_loc(arr){
     ret.push((normal + h) * Math.cos(loc_lat) * Math.cos(loc_long));
     ret.push((normal + h) * Math.cos(loc_lat) * Math.sin(loc_long));
     ret.push((normal + h) * (1 - eccentricity * eccentricity) * Math.sin(loc_lat));
-    
-    //Orientation
-    //Cesium
-    var nvec = {};
-    Cesium.Ellipsoid.WGS84.geodeticSurfaceNormalCartographic(new Cesium.Cartographic(loc_long, loc_lat, h), nvec);
-    ret.push(nvec["x"]);
-    ret.push(nvec["y"]);
-    ret.push(nvec["z"]);
+    ret.push(Math.cos(loc_lat) * Math.cos(loc_long));
+    ret.push(Math.cos(loc_lat) * Math.sin(loc_long));
+    ret.push(Math.sin(loc_lat));
     return ret;
 }
 
@@ -146,16 +141,16 @@ function create_samples_with_loc(audio_selector = "anthems"){
         panner.panningModel = "HRTF";
         //Positioning?
         //cesium.js
-        var cartes = set_samples_loc(arr);
-        panner.setPosition(cartes[0], cartes[1], cartes[2]);
+        var geo6 = set_samples_loc(arr);
+        panner.setPosition(geo6[0], geo6[1], geo6[2]);
         sampler.connect(panner);
         sampler.start();
 
         panner.refDistance = 700;
         //Orientation
-        panner.setOrientation(cartes[3], cartes[4], cartes[5]);
-        panner.coneInnerAngle = 1;
-        panner.coneOuterAngle = 90;
+        panner.setOrientation(geo6[3], geo6[4], geo6[5]);
+        panner.coneInnerAngle = 10;
+        panner.coneOuterAngle = 140;
         panner.coneOuterGain = 0;
         
         //Make this optional?
@@ -166,10 +161,10 @@ function create_samples_with_loc(audio_selector = "anthems"){
         geo_buses.push(geo_bus);
         //Icons
         if (arr[3]) {
-            place_billboard(cartes[0], cartes[1], cartes[2], arr[3]);
+            place_billboard(geo6[0], geo6[1], geo6[2], arr[3]);
         }
         else {
-            place_billboard(cartes[0], cartes[1], cartes[2], "img/xph.png");
+            place_billboard(geo6[0], geo6[1], geo6[2], "img/xph.png");
         }
     });
 }

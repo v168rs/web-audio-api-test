@@ -7,6 +7,26 @@ function map(val, min1, max1, min2, max2) {
     return (val - min1) / (max1 - min1) * (max2 - min2) + min2;
 } //from p5js
 
+//For now this doesn't work when you have a sum less than num - mostly used to get note values
+function rand_array_range(sum = 16, num = 8) {
+    var i,
+        rand_arr = [],
+        final_arr = [],
+        es = sum - num;
+    rand_arr[0] = 0;
+    for (i = 1; i < num; i++) {
+        rand_arr.push(Math.round(Math.random()*es));
+    }
+    rand_arr.push(es);
+    rand_arr.sort(function(a, b) {return a - b;});
+    rand_arr.forEach(function(n, i) {
+        if(rand_arr[i+1] != null) {
+            final_arr[i] = 1 + rand_arr[i+1] - rand_arr[i];
+        }
+    });
+    return final_arr;
+}
+
 var note_names = ["C", "Db", "D", "Eb", "E", "F", "Gb", "G", "Ab", "A", "Bb", "B"];
 
 function midiToFreq(a = 69) {
@@ -21,7 +41,7 @@ function midiToNote(a = 69) {
 function midiArrayToNote(a = []) {
     var return_note_arr = [];
     a.forEach(function(note) {
-        return_note_arr.push(midiToNote(note));
+        return_note_arr.push(midiToNote(note[0]) + ", " + note[1]);
     })
     return return_note_arr;
 }
@@ -34,22 +54,24 @@ function noteToMidi(a = "") {
     return (parseInt(octave[0]) + 1)*12 + note_names.indexOf(note[0]);
 }
 
-var chromatic = [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-    maj_scale = [0, 2, 2, 1, 2, 2, 2],
-    min_scale = [0, 2, 1, 2, 2, 1, 2],
-    maj_pentatonic = [0, 2, 2, 3, 2],
-    min_pentatonic = [0, 3, 2, 2, 3],
-    min_blues = [0, 3, 2, 1, 1, 3],
-    maj_blues = [0, 2, 1, 1, 3, 2],
-    mixolydian = [0, 2, 2, 1, 2, 2, 1];
+var scales = { chromatic : [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+    maj_scale : [0, 2, 2, 1, 2, 2, 2],
+    min_scale : [0, 2, 1, 2, 2, 1, 2],
+    maj_pentatonic : [0, 2, 2, 3, 2],
+    min_pentatonic : [0, 3, 2, 2, 3],
+    min_blues : [0, 3, 2, 1, 1, 3],
+    maj_blues : [0, 2, 1, 1, 3, 2],
+    mixolydian : [0, 2, 2, 1, 2, 2, 1]
+           };
 
+//Returns array of midi notes
 function getScaleFromRoot(scale, midi_root, octaves) {
     var scale_return = [],
         last_note = 0;
     var k;
     for (k = 0; k < octaves; k++) {
         last_note = midi_root + 12 * k;
-        scale.forEach(
+        scales[scale].forEach(
             function(note) {
                 last_note += note;
                 scale_return.push(last_note);
@@ -162,8 +184,8 @@ var cur_note = 69;
 var cur_chord = "I";
 
 //Probably isn't an actual Markov chain
-//Generates a phrase of a given length based off our arrays; Give scale as maj_scale, min_scale, etc. Note_unit is the minimum length of a note; all other note lengths will be multiples of that unit.
-function generateMarkovPhrase(root, scale, octaves = 2, length, clean = true, tone_anchor = 2, note_unit = 0.2) {
+//Generates a phrase of a given number of notes (note_num) based off our arrays; Give scale as maj_scale, min_scale, etc. Duration is in seconds. Tone_anchor is a variable that determines how much the generator prefers the current chord's tones.
+function generateMarkovPhrase(root, scale, octaves = 2, note_num = 8, clean = true, tone_anchor = 2, duration = 16) {
     var cur_scale = getScaleFromRoot(scale, root, 2),
         ref_scale = getScaleFromRoot(scale, 0, 2), //Just for setting tonality.
         melody = [],
@@ -242,18 +264,22 @@ function generateMarkovPhrase(root, scale, octaves = 2, length, clean = true, to
         }
     }
 //Add more note choices according to parameter "dissonance"
+    //Maybe do something a little less silly
+    //Through clever multiplication we can use this coefficient (where 2 is now) to select a unit note length
+    var rand3 = rand_array_range(note_num*2, note_num);
     var j = 0;
-    for (j = 0; j < length; j++) {
+    for (j = 0; j < note_num; j++) {
         var rand1 = Math.random();
         var rand2 = Math.random();
         var expr1 = Math.abs(12 + cur_note - root) % 12
         var note_array = [];
-        note_array.push(root + cur_melody_obj[expr1][Math.floor(map(rand1, 0, 1, 0, cur_melody_obj[expr1].length))]);
-        //4 is the current maximum note length multiple
-        //Push the note length
-        note_array.push(note_unit*Math.round(map(rand2, 0, 1, 1, 4)));
+        note_array.push(root + cur_melody_obj[expr1][Math.floor(rand1*cur_melody_obj[expr1].length)]);
+        //Say we generate 8 notes whose lengths add up to 16. Now we want this to fit evenly into 20 seconds:
+        //[3, 1, 1, 2, 1, 2, 2, 4]
+        //Divide each by 16 and multiply by 20.
+        note_array.push(rand3[j]*duration/(note_num*2));
         melody.push(note_array);
-        cur_note = root + cur_melody_obj[expr1][Math.floor(map(rand1, 0, 1, 0, cur_melody_obj[expr1].length))];
+        cur_note = root + cur_melody_obj[expr1][Math.floor(rand1*cur_melody_obj[expr1].length)];
     }
     return melody;
 }
@@ -278,12 +304,12 @@ function generateMarkovChord() {
     viidim: ["I"]
 }
     var rand = Math.random(),
-        new_chord = standard_chord_obj[cur_chord][Math.floor(map(rand, 0, 1, 0, standard_chord_obj[cur_chord].length))];
+        new_chord = standard_chord_obj[cur_chord][Math.floor(rand*standard_chord_obj[cur_chord].length)];
     cur_chord = new_chord;
     return new_chord;
 }
 
-function doMarkovSequence(root = 51, scale = maj_scale, octaves = 2, phrase_length = 8, clean = true, tone_anchor = 2, starting_chord = "I", num_phrases = 20) {
+function doMarkovSequence(root = 51, scale = "maj_scale", octaves = 2, phrase_length = 8, clean = true, tone_anchor = 2, starting_chord = "I", num_phrases, duration) {
     cur_chord = starting_chord;
     var melody = [],
         progression = [],
@@ -307,9 +333,12 @@ function doMarkovSequence(root = 51, scale = maj_scale, octaves = 2, phrase_leng
     viidim: [11, chords.diminished_seven]
 };
     for (p = 0; p < num_phrases; p++) {
-        var expr = Math.floor(map(Math.random(), 0, 1, 0, 2));
-        melody.push(...generateMarkovPhrase(root, scale, octaves, phrase_length, clean, tone_anchor));
-        progression.push(getTriadFromDegree(root, degrees[cur_chord], expr));
+        var expr = Math.floor(Math.random()*2);
+        var ch_arr = [];
+        melody.push(...generateMarkovPhrase(root, scale, octaves, phrase_length, clean, tone_anchor, duration/num_phrases));
+        ch_arr.push(getTriadFromDegree(root, degrees[cur_chord], expr));
+        ch_arr.push(duration/num_phrases); //We are assuming that there is one chord per phrase for now.
+        progression.push(ch_arr); //Rhythm for chord progressions next
         generateMarkovChord();
     }
     //Have something where we repeat phrases according to parameters?

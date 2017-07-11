@@ -29,9 +29,9 @@ var bus_count = 0;
 var editor = false;
 
 //Feed in doMarkovSequence from mus.js for sequence
-function playMarkovSequence(melody_bus = 0, melody_osc_num = 0, chord_bus = 1, sequence, note_length = 0.2, chord_length = 1.6) {
+function playMarkovSequence(melody_bus = 0, melody_osc_num = 0, chord_bus = 1, sequence) {
     playNoteSequence(melody_bus, melody_osc_num, sequence[0]);
-    playProgression(chord_bus, sequence[1], chord_length);
+    playProgression(chord_bus, sequence[1]);
 }
 
 function update_display() {
@@ -334,7 +334,7 @@ function playNoteSequence(bus_num, osc_num, sequence) {
     var total_length = 0;
     sequence.forEach(function(note, index)
         {
-            playMidiNote(bus_num, osc_num, note[0], note[1] + total_length, true);
+            playMidiNote(bus_num, osc_num, note[0], total_length, true);
             total_length += note[1];
         });
     console.log("Playing a sequence " + total_length + "seconds long.");
@@ -348,8 +348,10 @@ function sequenceEnded(){
 
 //MIDI functionality for plugins later?
 
-//takes midi numbers and delay time from NOW
+
 //ADSR?
+//Samples?
+//takes midi numbers and delay time from NOW
 function playMidiNote(bus_num, osc_num, note, time, sync) {
     buses[bus_num][0][osc_num].frequency.setValueAtTime(midiToFreq(note), context.currentTime+time);
     //Looks for frequency modulators and adjusts them if sync is on.
@@ -362,12 +364,12 @@ function playMidiNote(bus_num, osc_num, note, time, sync) {
     }
 } 
 
-function playProgression(bus_num, sequence, note_length) {
+function playProgression(bus_num, sequence) {
     var total_length = 0;
-    sequence.forEach(function(chord, index)
+    sequence.forEach(function(chord_arr, index)
         {
-            playChord(bus_num, chord, note_length*index, true);
-            total_length += note_length;
+            playChord(bus_num, chord_arr[0], total_length, true);
+            total_length += chord_arr[1];
         });
     console.log("Playing a progression " + total_length + "seconds long.")
 }
@@ -375,6 +377,7 @@ function playProgression(bus_num, sequence, note_length) {
 //takes a chord array and tries to play it on all available oscs on a bus (obviously you won't get any polyphony if you're only using one synth)
 //Also you can play regular notes and dyads if you really want
 //Now works with multiple frequency modulators!
+//Rhythm when?
 function playChord(bus_num, chord, time, sync = true) {
     chord.forEach(function(note, index) {
         if(index < buses[bus_num][0].length) {
