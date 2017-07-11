@@ -5,7 +5,7 @@
 //https://padenot.github.io/web-audio-perf/
 
 //samples
-var impulse_file = "snd/impulse.wav";
+var impulse_file = "snd/imp/impulse.wav";
 
 function map(val, min1, max1, min2, max2) {
     return (val - min1) / (max1 - min1) * (max2 - min2) + min2;
@@ -149,7 +149,7 @@ function add_panner(bus_num, x_pan = 0, loc = 1) {
     return fx;
 }
 
-function add_convolution(bus_num, impulse = "snd/impulse.wav", loc = 1) {
+function add_convolution(bus_num, impulse = "snd/imp/impulse.wav", loc = 1) {
     var fx = context.createConvolver();
     var fx_array = [];
     var fx_dry_gain = context.createGain();

@@ -41,10 +41,25 @@ var geo_audio_samples = {
     //MP3s are kept at https://drive.google.com/open?id=0B6_a4sq0zv4FRnFhajFJNkdRREU
     ],
     enviro : [
-        ["snd/env/jfny.ogg", 41.7909607694, -74.9167156219]
+        ["snd/env/jfny.ogg", 41.7909607694, -74.9167156219], //Outside a barn in Jefferson, NY
+        ["snd/env/sfca1.ogg", 37.718873622, -122.473933697], //Traffic on 19th Avenue
+        ["snd/env/sfca2.ogg", 37.7864449554, -122.408093512], //Traffic on Powell
+        ["snd/env/sfca3.ogg", 37.784780933, -122.407699227], //Cable car
+        ["snd/env/kbca.ogg", 39.2351617333, -120.023671389], //Kings Beach, Lake Tahoe (CA)
+        ["snd/env/gvca.ogg", 38.9551372254, -120.602416992], //Pond in Grass Valley, Nevada County, CA
+        ["snd/env/cdco.ogg", 39.5564712836, -107.298660278], //Roaring Fork River in Carbondale, CO
+        ["snd/env/ny1.ogg", 40.7359741672, -73.9904308319] //Union Square, New York
     ]
+    //Freesound.org
+    //These ogg files are kept at 
 }
 //Flags are kept at https://drive.google.com/open?id=0B6_a4sq0zv4FT0N2TUNwb3ZqNnc
+
+//impulse, cone_inner, cone_outer
+var geo_audio_attributes = {
+    anthems : ["snd/imp/impulse.wav", 10, 140],
+    enviro : ["snd/imp/impulse2.wav", 90, 180],
+};
 
 function load_sample(sample, buffer_receiver) {
     var getSound = new XMLHttpRequest();
@@ -64,8 +79,7 @@ var cur_pos = [0, 0];
 var context;
 var convolver;
 
-function geo_init() {
-    var impulse = "snd/impulse.wav";
+function geo_init(impulse = "snd/imp/impulse.wav") {
     context = new AudioContext();
     
     var master_gain = context.createGain();
@@ -73,16 +87,19 @@ function geo_init() {
     
     //convolution reverb
     convolver = context.createConvolver(); //dry/wet?
-    var soundSource = context.createBufferSource();
     load_sample(impulse, function(b) {
         convolver.buffer = b;
-        soundSource.buffer = b;
-        soundSource.loop = true;
     });
     convolver.connect(master_gain);
     
     //Then create smaller "buses" with audio buffers and panners and hook them all up to the convolver[[sampler panner][sampler panner]]
     
+}
+
+function change_impulse(impulse = "snd/imp/impulse.wav") {
+    load_sample(impulse, function(b) {
+        convolver.buffer = b;
+    });
 }
 
 function deg2rad(x) {
@@ -129,7 +146,7 @@ function place_billboard(bx, by, bz, b_img) {
     });
 }
 
-function create_samples_with_loc(audio_selector = "anthems"){
+function create_samples_with_loc(audio_selector = "anthems", cone_inner = 10, cone_outer = 140){
     geo_audio_samples[audio_selector].forEach(function(arr){
         var geo_bus = [];
         var sampler = context.createBufferSource();
@@ -149,8 +166,8 @@ function create_samples_with_loc(audio_selector = "anthems"){
         panner.refDistance = 700;
         //Orientation
         panner.setOrientation(geo6[3], geo6[4], geo6[5]);
-        panner.coneInnerAngle = 10;
-        panner.coneOuterAngle = 140;
+        panner.coneInnerAngle = cone_inner;
+        panner.coneOuterAngle = cone_outer;
         panner.coneOuterGain = 0;
         
         //Make this optional?
@@ -183,7 +200,13 @@ function change_sample_bank(audio_selector = "anthems") {
     geo_buses = [];
     //clear icons
     viewer.entities.removeAll();
-    create_samples_with_loc(audio_selector);
+    create_samples_with_loc(audio_selector, geo_audio_attributes[audio_selector][1], geo_audio_attributes[audio_selector][2]);
+    if(geo_audio_attributes[audio_selector]) {
+        change_impulse(geo_audio_attributes[audio_selector][0]);
+    }
+    else {
+        change_impulse("snd/imp/impulse2.wav");
+    }
 }
 
 var selector = document.getElementById("selector")
