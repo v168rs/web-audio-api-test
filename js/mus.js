@@ -82,7 +82,7 @@ function getScaleFromRoot(scale, midi_root, octaves) {
     return scale_return;
 }
 
-//Simple chords and inversions - Listed here in the key of C for simplicity. Inversions don't skip keys; they're all in order (for now).
+//Simple chords and inversions - Labeled in the key of C for simplicity. Inversions don't skip keys; they're all in order (for now).
 //The first number is not a tone. It is the number of semitones by which you would have to move down to get a chord equivalent to a root position chord based on the midi root. To get the number of semitones to move up, subtract from 12.
 var chords = {
     major: [

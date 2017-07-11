@@ -42,6 +42,9 @@ function update_display() {
                     if(obj.constructor === Array) {
                         obj.forEach(function(item, item_ind) {
                             bus_str += item + " " + item_ind + "<br>"
+                            if(item["gain"]) {
+                                bus_str += "gain:" + item["gain"]["value"] + "<br>";
+                            }
                             if(item["positionX"]) {
                             bus_str += "x: " + item["positionX"]["value"] + "<br>";
                             bus_str += "y: " + item["positionY"]["value"] + "<br>";
@@ -79,7 +82,7 @@ function waa_init() {
         create_new_bus(context.destination);
     }
     if(editor) {
-        setInterval(update_display, 100);
+        setInterval(update_display, 30);
     }
 }
 
@@ -120,9 +123,10 @@ function start_bus(bus_num) {
     if(buses[bus_num]) {buses[bus_num][0].forEach(function(osc) {osc.start();});}
 } 
 
-function add_osc(bus_num) {
+function add_osc(bus_num, type = "sine") {
     var osc = context.createOscillator();
     osc.frequency.setValueAtTime(220, context.currentTime);
+    osc.type = type;
     osc.connect(gains[bus_num]);
     buses[bus_num][0].push(osc);
 }
@@ -199,22 +203,23 @@ function add_filter(bus_num, type = "lowpass", frequency = "3000", Q="20", loc =
     return fx;
 }
 
-function add_ADSR_env(bus_num, attack, decay, sustain, release, loc = 1) {
+//ADHSR in seconds/levels
+function add_ADHSR_env(bus_num, attack = 0.2, decay = 0.4, hold = 2, sustain = 0.8, release = 0.5, loc = 1) {
     var fx = context.createGain();
     var fx_array = [];
     var fx_dry_gain = context.createGain();
     var fx_wet_gain = context.createGain();
-    var ADSR_array = [attack, decay, sustain, release];
+    var ADHSR_array = [attack, decay, hold, sustain, release];
     
     fx_array.push(fx);
     fx_array.push(fx_dry_gain);
-    fx_array.push(fx_wait_gain);
-    fx_array.push(ADSR_array);
+    fx_array.push(fx_wet_gain);
+    fx_array.push(ADHSR_array);
     
     buses[bus_num].splice(loc, 0, fx_array);
     update_bus(bus_num);
     return fx;
-}//3 gains just to keep with the effect architecture. Pretty low-cost. Then an array containing the ADSR info.
+}//3 gains just to keep with the effect architecture. Pretty low-cost. Then an array containing the ADHSR info.
 
 //TODO: waveshaper distortion?
 
@@ -348,12 +353,33 @@ function sequenceEnded(){
 
 //MIDI functionality for plugins later?
 
+//Looks for ADHSR and triggers it if it is found
+function triggerADHSR(bus_num, time) {
+    buses[bus_num].forEach(function(effect){
+        if((effect[0] instanceof GainNode) && (effect[3]) instanceof Array) {
+            var time_rel = context.currentTime + time;
+            effect[0].gain.linearRampToValueAtTime(0.0, time_rel + 0.01);
+            //Attack
+            time_rel += effect[3][0];
+            effect[0].gain.linearRampToValueAtTime(1.0, time_rel);
+            //Decay to sustain level
+            time_rel += effect[3][1]
+            effect[0].gain.linearRampToValueAtTime(effect[3][3], time_rel);
+            //Hold then ramp to 0 at release time
+            time_rel += effect[3][2];
+            effect[0].gain.linearRampToValueAtTime(effect[3][3], time_rel);
+            time_rel += effect[3][4];
+            effect[0].gain.linearRampToValueAtTime(0.0, time_rel);
+        }
+    });
+}
 
-//ADSR?
 //Samples?
 //takes midi numbers and delay time from NOW
 function playMidiNote(bus_num, osc_num, note, time, sync) {
     buses[bus_num][0][osc_num].frequency.setValueAtTime(midiToFreq(note), context.currentTime+time);
+    //ADHSR envelopes
+    triggerADHSR(bus_num, time);
     //Looks for frequency modulators and adjusts them if sync is on.
     if ((sync === true) && (mods[bus_num] != null)) {
         mods[bus_num].forEach(function(fm_ar) {

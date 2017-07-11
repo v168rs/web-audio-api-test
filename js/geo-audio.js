@@ -1,7 +1,7 @@
 //Special system specifically for geotagged samples
 
 //Requires Cesium.js
-//National anthems (soundfile, lat, long, flagicon)
+//National anthems (soundfile, lat, long, flagicon) maybe volume too (do something cool like volume proportional to GDP)
 var geo_audio_samples = {
     anthems : [
         ["snd/usa.mp3", 38.8977, -77.0365, "img/us.png"],     //http://www.music.army.mil/music/nationalanthem/

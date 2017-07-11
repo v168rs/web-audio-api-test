@@ -1,11 +1,18 @@
 <!DOCTYPE HTML>
 <style>
+    a:link {
+        color: darkgray;
+    }
+    a:visited {
+        color: darkgray;
+    }
     body {
         font-family: "Calibri";
         color: #aaa;
     }
 </style>
 <body id="body">
+    <p>Press ` to play a melody!</p>
     <a href="geo.html">Cesium/geo</a><br>
     <button id="start_btn">Start Synths</button>
     <button id="mute_btn">Mute Synths</button>
@@ -44,7 +51,8 @@
     <input id="gen_n_phr" type="number" value="8">
     <p>Total duration: </p>
     <input id="gen_dur" type="number" value="20">
-    <!--<input type="range" id="distort_slider" max="0.1" min="0" step="0.01" defaultValue="0.5">-->
+    <p>Dissonance: <div id="dis">0</div></p>
+    <input type="range" id="vol_slider" max="0.3" min="0" step="0.01" defaultValue="0.01">
     <div id="bus_display" style="pointer-events:none;"></div>
     
 <div style="margin-top:50px">
