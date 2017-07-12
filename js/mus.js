@@ -2,6 +2,7 @@
 //Script for handling MIDI/melody stuff
 //parameters that will later be manipulated by the data
 var dissonance = 0;
+var repetition = 9; //It's not a linear scale
 
 function map(val, min1, max1, min2, max2) {
     return (val - min1) / (max1 - min1) * (max2 - min2) + min2;
@@ -44,6 +45,14 @@ function midiArrayToNote(a = []) {
         return_note_arr.push(midiToNote(note[0]) + ", " + note[1]);
     })
     return return_note_arr;
+}
+
+function rhythmArrayFromMidi(a = []) {
+    var return_val_arr = [];
+    a.forEach(function(val) {
+        return_val_arr.push(note[1]);
+    });
+    return return_val_arr;
 }
 
 function noteToMidi(a = "") {
@@ -135,7 +144,7 @@ function getTriadFromDegree(midi_tonic, degree, inversion = 0) {
     return getTriad(midi_tonic + degree[0], degree[1], inversion);
 }
 
-
+//getDegreeFromTriad?
 
 //[degrees.I, degrees.I, degrees.I, degrees.I, degrees.iii, degrees.vi, degrees.ii, degrees.ii, degrees.IV, degrees.IV, degrees.V, degrees.V, degrees.V, degrees.viidim];
 /*
@@ -180,8 +189,8 @@ var dissonance_chord_obj = {
     i: ["I", "II"]
 }
 */
-var cur_note = 69;
-var cur_chord = "I";
+var cur_note = 69,
+    cur_chord = "I";
 
 //Probably isn't an actual Markov chain
 //Generates a phrase of a given number of notes (note_num) based off our arrays; Give scale as maj_scale, min_scale, etc. Duration is in seconds. Tone_anchor is a variable that determines how much the generator prefers the current chord's tones.
@@ -278,6 +287,7 @@ function generateMarkovPhrase(root, scale, octaves = 2, note_num = 8, clean = tr
         //[3, 1, 1, 2, 1, 2, 2, 4]
         //Divide each by 16 and multiply by 20.
         note_array.push(rand3[j]*duration/(note_num*2));
+        //Enable us to pass an old rhythm in?
         melody.push(note_array);
         cur_note = root + cur_melody_obj[expr1][Math.floor(rand1*cur_melody_obj[expr1].length)];
     }
@@ -343,4 +353,49 @@ function doMarkovSequence(root = 51, scale = "maj_scale", octaves = 2, phrase_le
     }
     //Have something where we repeat phrases according to parameters?
     return [melody, progression];
+}
+
+//Available modulations? Music comes from repetition
+//Separate rhythm repetition from melody repetition somehow? Rhythmic repetition is much more common
+function doMetaSequence(root = 53, scale = "maj_scale", octaves = 2, phrase_length = 8, clean = true, tone_anchor = 2, starting_chord = "I", num_phrases = 12, duration = 48, melody_bus = 0, melody_osc_num = 0, chord_bus = 1) {
+    //Record index and contents of LAST UNIQUE PHRASE so we don't keep repeating the same thing over and over
+    var meta_sequence = [],
+        i = 0,
+        push_phrase,
+        master_rep = [[0, 0], [0, 0], [-1, 1], [-2, 1], [-2, 2], [-2, 2], [-2, 2], [-4, 2], [-4, 4], [-4, 4]]; //Back how far and grab how many phrases? Weight common forms
+    //Generate a new unique phrase
+    push_phrase = doMarkovSequence(root, scale, octaves, phrase_length, clean, tone_anchor, starting_chord, 1, duration/num_phrases);
+    meta_sequence.push(push_phrase);
+    var intvl = setInterval(function () {
+        //Play the current phrase
+        playMarkovSequence(melody_bus, melody_osc_num, chord_bus, meta_sequence[i]);
+        //Check if we have room for more
+        if(i == num_phrases) {
+            clearInterval(intvl);
+        }
+        //If more than n number of phrases before are available AND this is within the total number of phrases allowed, add those to the list of possibility and select groups of 1, 2, 4. Also check for repetition.
+        var pick_rep = [];
+        master_rep.forEach(function(xy, index){
+            if((index <= repetition) && (meta_sequence[i+xy[0]]) && ((meta_sequence.length - 1 + xy[1]) <= num_phrases)) {
+                pick_rep.push(xy);
+                console.log(xy)
+            }
+        });
+        var cur_opt = pick_rep[Math.floor(Math.random()*(pick_rep.length - 1))]
+        if (cur_opt[0] == 0) {
+            //Generate a new unique phrase [0, 0]
+            console.log("making new phrase");
+            push_phrase = doMarkovSequence(root, scale, octaves, phrase_length, clean, tone_anchor, cur_chord, 1, duration/num_phrases);
+        }
+        else {
+            var k;
+            //console.log("grabbing " + cur_opt[1] " phrases from position " + i+cur_opt[0]);
+            for(k = 0; k <= cur_opt[1]; k++) {
+                push_phrase = push_phrase.concat(meta_sequence[i+cur_opt[0]+k]);
+            } //oh god it's asynchronous what have I done.
+        }
+        meta_sequence.push(push_phrase);
+        i++; //Increment!
+    }, duration/num_phrases*1000);
+    return meta_sequence;
 }

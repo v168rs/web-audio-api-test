@@ -6,8 +6,8 @@ function create_temperature_synth(){
     var convolver = add_convolution(bus_num);
     dry_wet(bus_num, 1, 10);
     var filter = add_filter(bus_num, "lowpass", 3000, 30);
-    var mod1 = add_osc_modulator(bus_num, 0, 0, "frequency", 440, 5, 25)
-    var mod2 = add_osc_modulator(bus_num, 0, 0, "frequency", 440, 3, 50)
+    var mod1 = add_osc_modulator(bus_num, 0, 0, "frequency", 440, 4, 25)
+    var mod2 = add_osc_modulator(bus_num, 0, 0, "frequency", 440, 2, 50)
     add_ADHSR_env(bus_num, 0.01, 0.2, 0, 0, 0.2);
     //add_osc_modulator(bus_num, 2, 0, "frequency", 1, 0.1, 75)
     set_bus_gain(bus_num, 0.1);
@@ -26,17 +26,10 @@ function create_polyphonic_synth(){
     set_bus_gain(bus_num, 0.02);
     return bus_num;
 }
-function create_ocean_waves() {
-    var bus_num = create_new_bus(context.destination, false);
-    add_sampler(bus_num);
-    add_panner(bus_num);
-    return bus_num;
-}
 
 function synths_init() {
     base_synth = create_temperature_synth();
     create_polyphonic_synth();
-    //create_ocean_waves();
 }
 
 /* very obsolete
@@ -177,7 +170,7 @@ document.getElementById("saw_btn").onclick = function() {
 document.getElementById("tri_btn").onclick = function() {
     change_osc(0, 0, 'triangle');}
 
-var cur_img = "dec_01";
+var cur_img = "img/data/dec_01";
 
 //CANVAS
 function screen_init() {
@@ -188,8 +181,8 @@ function screen_init() {
         img = new Image(),
         data_img = new Image(),
         body = document.getElementById("body");
-    img.src = "dec_01.png"
-    data_img.src = "dec_01_gs.png"
+    img.src = "img/data/dec_01.png"
+    data_img.src = "img/data/dec_01_gs.png"
     display_canvas_context.drawImage(img, 0, 0);
     data_canvas_context.drawImage(data_img, 0, 0);
 }
@@ -231,21 +224,21 @@ vol_slider.onmousemove = function() {
 body.onkeydown = function(e) {
     if(e["key"] == "`") {
         
-    playMarkovSequence(0, 0, 1, doMarkovSequence(parseFloat(document.getElementById("gen_root").value), document.getElementById("scale_selector").value, 2, document.getElementById("gen_n_phr").value, true, 2, document.getElementById("start_selector").value, document.getElementById("gen_phr").value, document.getElementById("gen_dur").value));
+    playMarkovSequence(0, 0, 1, doMarkovSequence(parseFloat(document.getElementById("gen_root").value), document.getElementById("scale_selector").value, 3, document.getElementById("gen_n_phr").value, true, 2, document.getElementById("start_selector").value, document.getElementById("gen_phr").value, document.getElementById("gen_dur").value));
     console.log(dissonance);
     }
 }
 
 //1022 514
 //https://drive.google.com/open?id=0B6_a4sq0zv4FSlBuc2JRN0Uzc28
-//Does NOT go in the img folder; goes in the root folder
+//Goes in img/data
 document.getElementById("data_pic_btn").onclick = function() {
-    if(cur_img === "dec_01") {
-        swapImages("jul_01.png", "jul_01_gs.png");
-        cur_img = "jul_01";
+    if(cur_img === "img/data/dec_01") {
+        swapImages("img/data/jul_01.png", "img/data/jul_01_gs.png");
+        cur_img = "img/data/jul_01";
     }
     else {
-        swapImages("dec_01.png", "dec_01_gs.png");
-        cur_img = "dec_01";
+        swapImages("img/data/dec_01.png", "img/data/dec_01_gs.png");
+        cur_img = "img/data/dec_01";
     }
     }
