@@ -201,27 +201,14 @@ function load_sample(sample, buffer_receiver) {
     getSound.send();
 }
 
-
-var xhr_worker = new Worker('xhr-worker.js');
-
-//XHR for arraybuffer - url_array, callback
-function multiple_xhr (url_array, receiver) {
-    xhr_worker.postMessage(["xhr", url_array]);
-    xhr_worker.onmessage = function(e) {
-        receiver(e.data[0], e.data[1], e.data[2]);
-    }
-}
-
 var geo_buses = [],
     cur_audio_selector = 0,
     context,
     convolver,
-    listening_nodes = 0,
-    scratchBuffer; //If we can't free audiobuffers at least we can set them to 1 byte
+    listening_nodes = 0;
 
 function geo_init(impulse = "snd/imp/impulse.wav") {
     context = new AudioContext();
-    scratchBuffer = context.createBuffer(1, 1, 44100);
     var master_gain = context.createGain();
     master_gain.connect(context.destination);
     
@@ -249,16 +236,10 @@ function deg2rad(x) {
 var ind_arr = [],
     url_arr = [],
     dist_arr = [],
-    rej_arr = [],
-    buffer_memory_usage = 0;
+    rej_arr = [];
 //4000 km?
 
-
-
-//With local geo_audio_samples: 3 > 49248 bytes
-//With global geo_audio_samples: 3 > 16400 bytes
 function find_prox_nodes(range = 2000000, audio_selector = 0, lat, long, max_nodes = 7) {
-    //Who wants to listen to more than 7 countries at once anyways
     ind_arr = [];
     url_arr = [];
     dist_arr = [];
@@ -277,23 +258,17 @@ function find_prox_nodes(range = 2000000, audio_selector = 0, lat, long, max_nod
         }
     });
     rej_arr.forEach(function(index) {
-        if(geo_buses[index] && (geo_buses[index][0] instanceof AudioBufferSourceNode)) {
+        if(geo_buses[index] && (geo_buses[index][0] instanceof MediaElementAudioSourceNode)) {
             geo_buses[index][0].disconnect();
-            geo_buses[index][0].stop();
-            //Buffers are retained in memory even after the AudioBufferSourceNode is removed. Some browsers allow you to set the buffer to a 1-byte buffer. Others will just leak memory like crazy.
-            try {geo_buses[index][0].buffer = scratchBuffer; } catch(e) {
-                buffer_memory_usage += geo_buses[index][0].buffer.length*4;
-                console.warn("This browser has leaked " + buffer_memory_usage + " bytes of AudioBuffers.");} //Web Audio API - NOPE
-            geo_buses[index][0] = null; //free the audiobuffersourcenode
+            if(!geo_buses[index][0].paused) {geo_buses[index][0].mediaElement.pause(); }
+            geo_buses[index][0] = null;
             listening_nodes -= 1;
-            xhr_worker.postMessage(["del_pl", geo_audio_samples[audio_selector][index][0]]);
         }
     });
     //Sort by proximity (closest first) - Should prevent zooming on a country only to discover you can't hear it
     var arr_keys = Object.keys(dist_arr);
     arr_keys.sort(function(a, b){return dist_arr[a] < dist_arr[b]});
     url_arr = arr_keys.map(function(index){
-        console.log(url_arr);
        return url_arr[index];
     });
     ind_arr = arr_keys.map(function(index){
@@ -304,24 +279,17 @@ function find_prox_nodes(range = 2000000, audio_selector = 0, lat, long, max_nod
     ind_arr = ind_arr.slice(0, max_nodes-listening_nodes);
     
     if(url_arr[0] && (listening_nodes < max_nodes)) {
-        multiple_xhr(url_arr, function(b, i, n) {
-            //context.decodeAudioData uses a lot of resources
-        context.decodeAudioData(b, function(d) {
-            if((geo_buses[ind_arr[i]]) && !(geo_buses[ind_arr[i]][0] instanceof AudioBufferSourceNode)) {
-                var sampler  = context.createBufferSource();
-                geo_buses[ind_arr[i]][0] = sampler;
-                sampler.connect(geo_buses[ind_arr[i]][1]);
-                sampler.connect(geo_buses[ind_arr[i]][1]);
-                sampler.buffer = d;
-                sampler.loop = true;
-                sampler.start();
-                listening_nodes += 1;
-                xhr_worker.postMessage(["push_pl", n]);
-                d = null;
-                b = null; //PLEASE GC THIS
+        //Play it HTML5 style
+        url_arr.forEach(function(url, index){
+            if((geo_buses[ind_arr[index]][0] === undefined) || (geo_buses[ind_arr[index]][0] === null)) {
+                var audio_source = context.createMediaElementSource(new Audio(url));
+                audio_source.mediaElement.loop = true;
+                audio_source.mediaElement.play();
+                geo_buses[ind_arr[index]][0] = audio_source;
+                audio_source.connect(geo_buses[ind_arr[index]][1]);
             }
         });
-    }); 
+        
     }
 }
 
@@ -378,6 +346,7 @@ document.getElementById("rlb").onclick = function() {
 }
 
 //Placing icons in Cesium
+
 function place_billboard(bx, by, bz, b_img) {
     viewer.entities.add({
         position : new Cesium.Cartesian3(bx, by, bz),
@@ -394,19 +363,23 @@ function create_samples_with_loc(audio_selector = 0, cone_inner = 10, cone_outer
         var panner = context.createPanner();
         panner.panningModel = "HRTF";
         //Positioning
+        
         //cesium.js
         var geo6 = set_samples_loc(arr);
         panner.setPosition(geo6[0], geo6[1], geo6[2]);
         panner.refDistance = 700;
+        
         //Orientation
         panner.setOrientation(geo6[3], geo6[4], geo6[5]);
         panner.coneInnerAngle = cone_inner;
         panner.coneOuterAngle = cone_outer;
         panner.coneOuterGain = 0;
         panner.connect(convolver);
+        
         //For access:
         geo_bus[1] = panner;
         geo_buses.push(geo_bus);
+        
         //Icons
         if (arr[3]) {
             place_billboard(geo6[0], geo6[1], geo6[2], arr[3]);
@@ -423,14 +396,11 @@ create_samples_with_loc(0);
 
 function change_sample_bank(audio_selector = 0) {
     //impulse, cone_inner, cone_outer
-    var geo_audio_attributes = {
-        anthems : ["snd/imp/impulse.wav", 10, 140],
-        enviro : ["snd/imp/impulse3.wav", 90, 180],
-    };
+    var geo_audio_attributes = [["snd/imp/impulse.wav", 10, 140], ["snd/imp/impulse3.wav", 90, 180]];
     //clear geo_buses
     cur_audio_selector = audio_selector;
     geo_buses.forEach(function(bus) {
-        if(bus[0] instanceof AudioBufferSourceNode) {
+        if(bus[0] instanceof MediaElementAudioSourceNode) {
             bus[0].loop = false;
             bus[0].disconnect();
             bus[0] = null;
