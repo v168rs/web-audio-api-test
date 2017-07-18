@@ -10,19 +10,19 @@ function create_temperature_synth(){
     var mod2 = add_osc_modulator(bus_num, 0, 0, "frequency", 440, 2, 50)
     add_ADHSR_env(bus_num, 0.01, 0.2, 0, 0, 0.2);
     //add_osc_modulator(bus_num, 2, 0, "frequency", 1, 0.1, 75)
-    set_bus_gain(bus_num, 0.1);
+    set_bus_gain(bus_num, 0.03);
     return [buses[bus_num][0][0], convolver, filter, mod1, mod2]
 }
 function create_polyphonic_synth(){
     var bus_num = create_new_bus(context.destination);
     add_osc(bus_num, "triangle");
-    add_osc(bus_num, "square");
+    add_osc(bus_num, "triangle");
     add_convolution(bus_num);
     add_ADHSR_env(bus_num, 2, 0.5, 0, 0, 2);
     dry_wet(bus_num, 1, 100);
     add_osc_modulator(bus_num, 0, 0, "frequency", 440, 5, 80)
-    add_osc_modulator(bus_num, 0, 1, "frequency", 440, 5, 80)
-    add_osc_modulator(bus_num, 0, 2, "frequency", 440, 5, 80)
+    add_osc_modulator(bus_num, 0, 1, "frequency", 440, 3, 80)
+    add_osc_modulator(bus_num, 0, 2, "frequency", 440, 4, 80)
     set_bus_gain(bus_num, 0.02);
     return bus_num;
 }
@@ -218,6 +218,7 @@ body.onmousemove = function(e) {
 var vol_slider = document.getElementById("vol_slider")
 vol_slider.onmousemove = function() {
     set_bus_gain(0, vol_slider.value);
+    set_bus_gain(1, vol_slider.value/3);
 }
 
 //doMarkovSequence(root, scale, octaves, phrase_length, clean, tone_anchor, starting_chord, num_phrases, duration)

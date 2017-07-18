@@ -205,11 +205,12 @@ var geo_buses = [],
     cur_audio_selector = 0,
     context,
     convolver,
+    master_gain,
     listening_nodes = 0;
 
 function geo_init(impulse = "snd/imp/impulse.wav") {
     context = new AudioContext();
-    var master_gain = context.createGain();
+    master_gain = context.createGain();
     master_gain.connect(context.destination);
     
     //convolution reverb
@@ -260,7 +261,7 @@ function find_prox_nodes(range = 2000000, audio_selector = 0, lat, long, max_nod
     rej_arr.forEach(function(index) {
         if(geo_buses[index] && (geo_buses[index][0] instanceof MediaElementAudioSourceNode)) {
             geo_buses[index][0].disconnect();
-            if(!geo_buses[index][0].paused) {geo_buses[index][0].mediaElement.pause(); }
+            if(!geo_buses[index][0].paused) {try {geo_buses[index][0].mediaElement.pause(); } catch(e) {} }
             geo_buses[index][0] = null;
             listening_nodes -= 1;
         }
@@ -422,4 +423,16 @@ function change_sample_bank(audio_selector = 0) {
 var selector = document.getElementById("selector")
 selector.addEventListener("change", function() {
     change_sample_bank(selector.value);
+});
+
+document.getElementById("mute_btn").addEventListener("click", function() {
+	master_gain.gain.setValueAtTime(0, context.currentTime);
+	document.getElementById("mute_btn").disabled = true;
+	document.getElementById("unmute_btn").disabled = false;
+});
+
+document.getElementById("unmute_btn").addEventListener("click", function() {
+	master_gain.gain.setValueAtTime(1, context.currentTime);
+	document.getElementById("unmute_btn").disabled = true;
+	document.getElementById("mute_btn").disabled = false;
 });
