@@ -179,8 +179,8 @@ function screen_init() {
         img = new Image(),
         data_img = new Image(),
         body = document.getElementById("body");
-    img.src = "img/data/dec_01.png"
-    data_img.src = "img/data/dec_01_gs.png"
+    img.src = "img/data/lstd_01_c.png"
+    data_img.src = "img/data/lstd_01_gs.png"
     display_canvas_context.drawImage(img, 0, 0);
     data_canvas_context.drawImage(data_img, 0, 0);
 }
@@ -199,7 +199,7 @@ body.onmousemove = function(e) {
     
     //console.log("Approximate surface temperature (°C): " + ((color_V == 1) ? "No data" : Math.round(map(color_V, 0, 1, -25, 45))));
         
-    soundMorph((color_V === 1) ? 0 : map(color_V, 0, 1, 400, 8000), base_synth[2].frequency, 0.1);
+    soundMorph((color_V === 1) ? 0 : map(color_V, 0, 1, 20, 400), base_synth[3].frequency, 0.1);
     //The more you sanitize this the less useful/accurate it becomes
 
     dissonance = (color_V === 1) ? dissonance : Math.round(map(color_V, 0, 1, 0, 2));

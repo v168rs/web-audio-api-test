@@ -97,7 +97,7 @@ function load_sample(sample, buffer_receiver) {
         });
     };
     getSound.send();
-} 
+}
 
 function create_new_bus(dest, osc_put = true) {
     var bus_array_to_push = [];
@@ -171,17 +171,34 @@ function add_convolution(bus_num, impulse = "snd/imp/impulse.wav", loc = 1) {
     update_bus(bus_num);
     return fx;
 }
-//Very expensive. TODO: Find a way to pipe all the anthem buses into a convolver instead?
 
 //sample from rmutt at freesound.org
-function add_sampler(bus_num, sample="snd/ocean_waves.wav", loc = 1) {
-    var sampler = context.createBufferSource();
-    load_sample(sample, function(b) {
-        sampler.buffer = b;
-        sampler.loop = true;
-    });
+//HTML5
+function add_sampler(bus_num, sample="snd/ocean_waves.wav") {
+    var sampler = context.createMediaElementSource(new Audio(sample));
+	sampler.mediaElement.loop=true;
+	sampler.mediaElement.play();
     buses[bus_num][0].push(sampler);
     update_bus(bus_num);
+	return sampler;
+}
+
+function add_queuer_sampler(bus_num, sample, temp=false, samples_to_spawn) {
+	var sampler = add_sampler(bus_num, sample);
+	sampler.mediaElement.addEventListener("seeked", function() {
+		if(!temp && (param1 != null) && (samples_to_spawn instanceof Array)) {
+			console.log("adding queuer sampler");
+			var tsamp = add_queuer_sampler(bus_num, samples_to_spawn[param1], true);
+			tsamp.mediaElement.loop = false;
+		}
+		else {
+			sampler.mediaElement.pause();
+			sampler.disconnect();
+			console.log("deleting queuer sampler");
+			sampler = null;
+		}
+	});
+	return sampler;
 }
 
 function add_filter(bus_num, type = "lowpass", frequency = "3000", Q="20", loc = 1) {
