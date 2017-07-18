@@ -12,7 +12,7 @@
     }
 </style>
 <body id="body">
-    <p>Press ` to play a melody! If the picture doesn't display at first, hit "Change the picture" until it does</p>
+    <p>Press ` to play a melody!</p>
     <a href="geo_prox.html">Geotagged audio (Web Audio API only; leaks memory like crazy and it's Chrome's fault)</a><br><a href="geo.html">Geotagged audio (demo)</a><br><a href="geo_prox_html5.html">Geotagged audio (Mix of HTML5 and Web Audio API - still devours RAM but doesn't crash Chrome immediately)</a><br>
     <button id="start_btn">Start Synths</button>
     <button id="mute_btn">Mute Synths</button>
@@ -22,7 +22,7 @@
     <button id="sqr_btn">Make the first oscillator square</button>
     <button id="saw_btn">Make the first oscillator sawtooth</button>
     <button id="tri_btn">Make the first oscillator triangle</button>
-    <button id="data_pic_btn">Change the picture</button>
+    <input type="range" id="data_pic_slider" max="11" min="0" step="1" value="0">
     <!--
     <button id="start_a_btn">Start Anthems</button>
     <button id="mute_a_btn">Mute Anthems</button>

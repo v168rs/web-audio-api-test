@@ -170,8 +170,6 @@ document.getElementById("saw_btn").onclick = function() {
 document.getElementById("tri_btn").onclick = function() {
     change_osc(0, 0, 'triangle');}
 
-var cur_img = "img/data/dec_01";
-
 //CANVAS
 function screen_init() {
     var display_canvas = document.getElementById("display_canvas"),
@@ -233,13 +231,6 @@ body.onkeydown = function(e) {
 //1022 514
 //https://drive.google.com/open?id=0B6_a4sq0zv4FSlBuc2JRN0Uzc28
 //Goes in img/data
-document.getElementById("data_pic_btn").onclick = function() {
-    if(cur_img === "img/data/dec_01") {
-        swapImages("img/data/jul_01.png", "img/data/jul_01_gs.png");
-        cur_img = "img/data/jul_01";
-    }
-    else {
-        swapImages("img/data/dec_01.png", "img/data/dec_01_gs.png");
-        cur_img = "img/data/dec_01";
-    }
+document.getElementById("data_pic_slider").oninput = function() {
+		swapImages("img/data/lstd_0" + (parseInt(document.getElementById("data_pic_slider").value) + 1) + "_c.png", "img/data/lstd_0" + (parseInt(document.getElementById("data_pic_slider").value) + 1) + "_gs.png");
     }

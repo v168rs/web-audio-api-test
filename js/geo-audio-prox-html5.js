@@ -349,10 +349,12 @@ document.getElementById("rlb").onclick = function() {
 //Placing icons in Cesium
 
 function place_billboard(bx, by, bz, b_img) {
+	var csnfs = new Cesium.NearFarScalar(1e7, 1.0, 5.0e7, 0.0);
     viewer.entities.add({
         position : new Cesium.Cartesian3(bx, by, bz),
         billboard : {
-        image : b_img
+        image : b_img,
+		translucencyByDistance : csnfs
     }
     });
 }
