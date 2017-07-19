@@ -29,13 +29,13 @@ var geo_audio_samples = [[
         ["snd/vietnam.mp3", 21.0278, 105.8342, "img/vn.png"],
         ["snd/iran.mp3", 35.6892, 51.3890, "img/ir.png"],
         ["snd/israel.mp3", 31.7683, 35.2137, "img/il.png"],
-        ["snd/algeria.mp3", 36.726017, 3.082667, "img/dz.png"],
+        ["snd/algeria.mp3", 36.753889, 3.058889, "img/dz.png"],
         ["snd/tanzania.mp3", -6.1630, 35.7516, "img/tz.png"],
         ["snd/rwanda.mp3", -1.9706, 30.1044, "img/rw.png"],
         ["snd/nigeria.mp3", 9.0765, 7.3986, "img/ng.png"],
-        ["snd/morocco.mp3", 33.9716, -6.8498, "img/ma.png"],
+        ["snd/morocco.mp3", 34.03, -6.83, "img/ma.png"],
         ["snd/botswana.mp3", -24.6282, 25.9231, "img/bw.png"],
-        ["snd/albania.mp3", 36.705, 3.05, "img/al.png"],
+        ["snd/albania.mp3", 41.316667, 19.816667, "img/al.png"],
         ["snd/angola.mp3", 42.5, 1.517, "img/ao.png"],
         ["snd/antigua_and_barbuda.mp3", 17.117, -61.85, "img/ag.png"],
         ["snd/armenia.mp3", 40.17, 44.5, "img/am.png"],
@@ -113,7 +113,7 @@ var geo_audio_samples = [[
         ["snd/maldives.mp3", 4.17, 73.5, "img/mv.png"],
         ["snd/malta.mp3", 35.883, 14.5, "img/mt.png"],
         ["snd/marshall_islands.mp3", 7.1, 171.383, "img/mh.png"],
-        ["snd/mauritania.mp3", 18.15, -15.97, "img/mr.png"],
+        ["snd/mauritania.mp3", 18.1, -15.95, "img/mr.png"],
         ["snd/mauritius.mp3", -20.15, 57.483, "img/mu.png"],
         ["snd/micronesia.mp3", 6.917, 158.15, "img/fm.png"],
         ["snd/moldova.mp3", 47, 28.85, "img/md.png"],
@@ -201,13 +201,13 @@ function load_sample(sample, buffer_receiver) {
     getSound.send();
 }
 
-var geo_buses = [],
-    cur_audio_selector = 0,
-    context,
-    convolver,
-	filter,
-    master_gain,
-    listening_nodes = 0;
+var geo_buses = [], //Array [] which holds arrays of [panners (for spatialization) and AudioBufferSourceNodes]. Panners are initialized in create_samples_with_loc.
+    cur_audio_selector = 0, //Determines the set of sounds being played ie Anthems, Ambient
+    context, //AudioContext
+    convolver, //Fancy reverb for sense of space
+	filter, //Filter (currently being modulated by color)
+    master_gain, //Master volume
+    listening_nodes = 0; //Number of nodes being listened to help cap the number of nodes that can be activated, updated by find_prox_nodes
 
 var data_canvas_context;
 
@@ -369,7 +369,7 @@ camera.changed.addEventListener(function() {
 	filter.frequency.linearRampToValueAtTime(map(cur_stat, 0, 1, 100, 6000), context.currentTime+1);
                                            });
 
-//debugging
+//Just for testing
 function repeat_listener_rand_loc(rep = 100) {
     var i,
         rand = Math.random(),
@@ -383,8 +383,7 @@ document.getElementById("rlb").onclick = function() {
     repeat_listener_rand_loc(100);
 }
 
-//Placing icons in Cesium
-
+//Placing icons in Cesium (national flags)
 function place_billboard(bx, by, bz, b_img) {
 	var csnfs = new Cesium.NearFarScalar(1e7, 1.0, 5.0e7, 0.0);
     viewer.entities.add({
@@ -396,12 +395,12 @@ function place_billboard(bx, by, bz, b_img) {
     });
 }
 
-//Make it initialize_loc instead
+//Initializes panners at preset locations with orientation away from the Earth's surface. Doesn't actually create samples anymore.
 function create_samples_with_loc(audio_selector = 0, cone_inner = 10, cone_outer = 140){
     geo_audio_samples[audio_selector].forEach(function(arr){
         var geo_bus = [];
         var panner = context.createPanner();
-        panner.panningModel = "HRTF";
+        panner.panningModel = "HRTF"; //More realistic and supports 3D panning but computationally costly. Cheaper option is "equalpower" which is just L/R.
         //Positioning
         
         //cesium.js
@@ -434,6 +433,14 @@ create_samples_with_loc(0);
 //Test of imagery layers
 viewer.scene.imageryLayers.addImageryProvider(new Cesium.SingleTileImageryProvider({url: "img/data/lstd_01_c.PNG"}));
 
+function change_imagery_layer(iurl = "img/data/lstd_01_c.PNG") {
+	if(viewer.scene.imageryLayers[1]) {
+		//Assuming we're not using more than one imageryLayer
+		viewer.scene.imageryLayers.remove(viewer.scene.imageryLayers[1]);
+	}
+	viewer.scene.imageryLayers.addImageryProvider(new Cesium.SingleTileImageryProvider({url: iurl}));
+}
+
 function change_sample_bank(audio_selector = 0) {
     //impulse, cone_inner, cone_outer
     var geo_audio_attributes = [["snd/imp/impulse.wav", 10, 140], ["snd/imp/impulse3.wav", 90, 180]];
@@ -457,6 +464,13 @@ function change_sample_bank(audio_selector = 0) {
     else {
         change_impulse("snd/imp/impulse2.wav");
     }
+}
+
+var slider = document.getElementById("data_pic_slider");
+slider.oninput = function() {
+	var v = parseInt(slider.value) + 1; //super hacky
+	change_imagery_layer("img/data/lstd_0" + v + "_c.PNG");
+	img_update("img/data/lstd_0" + v + "_gs.PNG");
 }
 
 var selector = document.getElementById("selector")
