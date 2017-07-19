@@ -101,10 +101,14 @@ function swapImages(new_img_src, new_data_img_src) {
         new_data_img = new Image();
     new_img.src = new_img_src;
     new_data_img.src = new_data_img_src;
-    display_canvas_context.clearRect(0, 0, display_canvas.width, display_canvas.height);
-    data_canvas_context.clearRect(0, 0, data_canvas.width, data_canvas.height);
-    display_canvas_context.drawImage(new_img, 0, 0);
-    data_canvas_context.drawImage(new_data_img, 0, 0);
+    new_img.onload = function() {
+		display_canvas_context.clearRect(0, 0, display_canvas.width, display_canvas.height);
+		display_canvas_context.drawImage(new_img, 0, 0);
+	};
+	new_data_img.onload = function() {
+		data_canvas_context.clearRect(0, 0, data_canvas.width, data_canvas.height);
+		data_canvas_context.drawImage(new_data_img, 0, 0);
+	};
 }
 
 //BUTTONS
@@ -181,9 +185,15 @@ function screen_init() {
         body = document.getElementById("body");
     img.src = "img/data/lstd_01_c.png"
     data_img.src = "img/data/lstd_01_gs.png"
-    display_canvas_context.drawImage(img, 0, 0);
-    data_canvas_context.drawImage(data_img, 0, 0);
+	img.onload = function() {
+		display_canvas_context.drawImage(img, 0, 0);
+	};
+	data_img.onload = function() {
+		data_canvas_context.drawImage(data_img, 0, 0);
+	};
 }
+
+screen_init(); //Wow
     
 body.onmousemove = function(e) {
     var data_canvas = document.getElementById("data_canvas"),

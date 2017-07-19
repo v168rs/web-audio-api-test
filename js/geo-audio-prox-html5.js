@@ -113,7 +113,7 @@ var geo_audio_samples = [[
         ["snd/maldives.mp3", 4.17, 73.5, "img/mv.png"],
         ["snd/malta.mp3", 35.883, 14.5, "img/mt.png"],
         ["snd/marshall_islands.mp3", 7.1, 171.383, "img/mh.png"],
-        ["snd/mauritania.mp3", 18.07, -51.97, "img/mr.png"],
+        ["snd/mauritania.mp3", 18.15, -15.97, "img/mr.png"],
         ["snd/mauritius.mp3", -20.15, 57.483, "img/mu.png"],
         ["snd/micronesia.mp3", 6.917, 158.15, "img/fm.png"],
         ["snd/moldova.mp3", 47, 28.85, "img/md.png"],
@@ -205,24 +205,49 @@ var geo_buses = [],
     cur_audio_selector = 0,
     context,
     convolver,
+	filter,
     master_gain,
     listening_nodes = 0;
+
+var data_canvas_context;
+
+function map(val, min1, max1, min2, max2) {
+    return (val - min1) / (max1 - min1) * (max2 - min2) + min2;
+} //from p5js
 
 function geo_init(impulse = "snd/imp/impulse.wav") {
     context = new AudioContext();
     master_gain = context.createGain();
     master_gain.connect(context.destination);
     
-    //convolution reverb
     convolver = context.createConvolver(); //dry/wet?
     load_sample(impulse, function(b) {
         convolver.buffer = b;
     });
-    convolver.connect(master_gain);
-    
-    //Then create smaller "buses" with audio buffers and panners and hook them all up to the convolver[[sampler panner][sampler panner]]
+	filter = context.createBiquadFilter(); //Modulation test
+	filter.type = "lowpass";
+	filter.frequency.value = 100;
+	filter.gain.value = 25;
+    convolver.connect(filter);
+	filter.connect(master_gain);
     
 }
+
+function img_update(img_src="img/data/lstd_01_gs.PNG") {
+	var data_img = new Image();
+	if(!data_canvas_context) {
+		data_canvas_context = document.createElement('canvas').getContext("2d")
+	}
+	data_canvas_context.canvas.width = 3600;
+	data_canvas_context.canvas.height = 1800;
+	data_img.src = img_src;
+	data_img.onload = function() {
+		data_canvas_context.clearRect(0, 0, data_canvas_context.canvas.width, data_canvas_context.canvas.height);
+		data_canvas_context.drawImage(data_img, 0, 0, 3600, 1800);
+	}   
+}
+
+img_update();
 
 function change_impulse(impulse = "snd/imp/impulse.wav") {
     load_sample(impulse, function(b) {
@@ -234,20 +259,25 @@ function deg2rad(x) {
     return x/180 * Math.PI;
 }
 
+function rad2deg(x) {
+	return (x/Math.PI * 180) % 360;
+}
+
 var ind_arr = [],
     url_arr = [],
     dist_arr = [],
     rej_arr = [];
 //4000 km?
+var cur_stat = 0;
 
 function find_prox_nodes(range = 2000000, audio_selector = 0, lat, long, max_nodes = 7) {
+	var geo6c = set_samples_loc(null, lat, long);
     ind_arr = [];
     url_arr = [];
     dist_arr = [];
     rej_arr = [];
     geo_audio_samples[audio_selector].forEach(function(arr, index){
         var geo6 = set_samples_loc(arr);
-        var geo6c = set_samples_loc(null, lat, long);
         var dist = Math.sqrt(Math.pow((geo6[0] - geo6c[0]), 2) + Math.pow((geo6[1] - geo6c[1]), 2) + Math.pow((geo6[2] - geo6c[2]), 2));
         if(dist < range) {
             ind_arr.push(index);
@@ -290,9 +320,15 @@ function find_prox_nodes(range = 2000000, audio_selector = 0, lat, long, max_nod
                 audio_source.connect(geo_buses[ind_arr[index]][1]);
             }
         });
-        
+        //99999 is a null value. lat/lon is lat. but can also be expressed by polar to equirectangular:
     }
-}
+	var y = Math.round((90 - rad2deg(lat)) * 10)  - data_canvas_context.canvas.offsetLeft; //1800
+	var x = Math.round((rad2deg(long) + 180) * 10)  - data_canvas_context.canvas.offsetTop;
+	var color = data_canvas_context.getImageData(x, y, 1, 1).data;
+	if(color) {
+		cur_stat = Math.max(color[0]/255, color[1]/255, color[2]/255);
+	}
+} //0 to 1
 
 //A function used for calculating the reference values for audio position and orientation. Returns array of 6 numbers with cartesian position and surface normal - I don't know how the math works
 function set_samples_loc(arr = null, lat = 0, long = 0){ 
@@ -330,6 +366,7 @@ var camera = viewer.camera;
 camera.changed.addEventListener(function() {
     set_listener_loc(camera.position["x"], camera.position["y"], camera.position["z"], camera.direction["x"], camera.direction["y"], camera.direction["z"], camera.up["x"], camera.up["y"], camera.up["z"]);
     find_prox_nodes(1000000, cur_audio_selector, camera.positionCartographic["latitude"], camera.positionCartographic["longitude"]);
+	filter.frequency.linearRampToValueAtTime(map(cur_stat, 0, 1, 100, 6000), context.currentTime+1);
                                            });
 
 //debugging
@@ -395,7 +432,7 @@ function create_samples_with_loc(audio_selector = 0, cone_inner = 10, cone_outer
 
 create_samples_with_loc(0);
 //Test of imagery layers
-//viewer.scene.imageryLayers.addImageryProvider(new Cesium.SingleTileImageryProvider({url: "jul_01.png"}));
+viewer.scene.imageryLayers.addImageryProvider(new Cesium.SingleTileImageryProvider({url: "img/data/lstd_01_c.PNG"}));
 
 function change_sample_bank(audio_selector = 0) {
     //impulse, cone_inner, cone_outer
