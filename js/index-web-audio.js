@@ -420,7 +420,6 @@ function playProgression(bus_num, sequence) {
 //takes a chord array and tries to play it on all available oscs on a bus (obviously you won't get any polyphony if you're only using one synth)
 //Also you can play regular notes and dyads if you really want
 //Now works with multiple frequency modulators!
-//Rhythm when?
 function playChord(bus_num, chord, time, sync = true) {
     chord.forEach(function(note, index) {
         if(index < buses[bus_num][0].length) {

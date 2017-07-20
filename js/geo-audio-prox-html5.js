@@ -435,7 +435,7 @@ viewer.scene.imageryLayers.addImageryProvider(new Cesium.SingleTileImageryProvid
 
 function change_imagery_layer(iurl = "img/data/lstd_01_c.PNG") {
 	if(viewer.scene.imageryLayers[1]) {
-		//Assuming we're not using more than one imageryLayer
+		//Assuming we're not using more than one imageryLayer which may be incorrect
 		viewer.scene.imageryLayers.remove(viewer.scene.imageryLayers[1]);
 	}
 	viewer.scene.imageryLayers.addImageryProvider(new Cesium.SingleTileImageryProvider({url: iurl}));
