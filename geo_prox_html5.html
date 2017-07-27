@@ -1,19 +1,50 @@
 <!DOCTYPE HTML>
 <!-- Cesium! -->
+<link href="https://fonts.googleapis.com/css?family=Open+Sans" rel="stylesheet">
 <style>
     @import url(js/Cesium/Widgets/widgets.css);
+	body {
+		background-color: black;
+		font-family: "Open Sans";
+	}
+	button {
+		border: 5px;
+		border-radius: 5px;
+		margin:5px;
+		padding:10px;
+		font-family: "Open Sans";
+		color:dodgerblue;
+		background-color:#222222;
+		outline:0;
+	}
+	button:hover {
+		cursor: pointer;
+		background-color:#333333;
+	}
+	button:disabled {
+		color:#444444;
+	}
+	select {
+		border: 5px;
+		border-radius: 5px;
+		margin-top: 10px;
+		padding:10px;
+		font-family: "Open Sans";
+		color:dodgerblue;
+		background-color:#222222;
+		outline:0;
+	}
 </style>
-<div id="cesiumContainer" class="fullSize"></div>
 <body>
     <select id="selector">
         <option value="0">World Anthems</option>
-        <option value="1">Environmental Sounds</option>
+        <option value="1">USA Environment</option>
     </select>
-    <a href="index.html">Back to index</a><br>
-    <button id="rlb">Random location 100x</button>
+    <a href="index.html"><button>Back to index</button></a>
     <button id="mute_btn">Mute</button>
 	<button disabled id="unmute_btn">Unmute</button>
-	<input type="range" id="data_pic_slider" max="11" min="0" step="1" value="0">
+	<div id="cesiumContainer" class="fullSize"></div>
+	<!--<input type="range" id="data_pic_slider" max="11" min="0" step="1" value="0">-->
 </body>
 <script src="js/Cesium/Cesium.js"></script>
 <script src="js/geo-audio-prox-html5.js"></script>

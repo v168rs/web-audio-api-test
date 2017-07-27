@@ -1,4 +1,4 @@
-"use strict";
+(function () {"use strict";
 //Special system specifically for geotagged samples
 //Requires Cesium.js
 //National anthems (soundfile, lat, long, flagicon) maybe volume too (do something cool like volume proportional to GDP)
@@ -224,12 +224,15 @@ function geo_init(impulse = "snd/imp/impulse.wav") {
     load_sample(impulse, function(b) {
         convolver.buffer = b;
     });
+	/*
 	filter = context.createBiquadFilter(); //Modulation test
 	filter.type = "lowpass";
 	filter.frequency.value = 100;
 	filter.gain.value = 25;
     convolver.connect(filter);
 	filter.connect(master_gain);
+	*/
+	convolver.connect(master_gain);
     
 }
 
@@ -366,7 +369,7 @@ var camera = viewer.camera;
 camera.changed.addEventListener(function() {
     set_listener_loc(camera.position["x"], camera.position["y"], camera.position["z"], camera.direction["x"], camera.direction["y"], camera.direction["z"], camera.up["x"], camera.up["y"], camera.up["z"]);
     find_prox_nodes(1000000, cur_audio_selector, camera.positionCartographic["latitude"], camera.positionCartographic["longitude"]);
-	filter.frequency.linearRampToValueAtTime(map(cur_stat, 0, 1, 100, 6000), context.currentTime+1);
+	//filter.frequency.linearRampToValueAtTime(map(cur_stat, 0, 1, 100, 6000), context.currentTime+1);
                                            });
 
 //Just for testing
@@ -379,9 +382,6 @@ function repeat_listener_rand_loc(rep = 100) {
     }
 }
 
-document.getElementById("rlb").onclick = function() {
-    repeat_listener_rand_loc(100);
-}
 
 //Placing icons in Cesium (national flags)
 function place_billboard(bx, by, bz, b_img) {
@@ -431,7 +431,7 @@ function create_samples_with_loc(audio_selector = 0, cone_inner = 10, cone_outer
 
 create_samples_with_loc(0);
 //Test of imagery layers
-viewer.scene.imageryLayers.addImageryProvider(new Cesium.SingleTileImageryProvider({url: "img/data/lstd_01_c.PNG"}));
+/* viewer.scene.imageryLayers.addImageryProvider(new Cesium.SingleTileImageryProvider({url: "img/data/lstd_01_c.PNG"}));
 
 function change_imagery_layer(iurl = "img/data/lstd_01_c.PNG") {
 	if(viewer.scene.imageryLayers[1]) {
@@ -440,7 +440,8 @@ function change_imagery_layer(iurl = "img/data/lstd_01_c.PNG") {
 	}
 	viewer.scene.imageryLayers.addImageryProvider(new Cesium.SingleTileImageryProvider({url: iurl}));
 }
-
+*/
+			  
 function change_sample_bank(audio_selector = 0) {
     //impulse, cone_inner, cone_outer
     var geo_audio_attributes = [["snd/imp/impulse.wav", 10, 140], ["snd/imp/impulse3.wav", 90, 180]];
@@ -465,14 +466,16 @@ function change_sample_bank(audio_selector = 0) {
         change_impulse("snd/imp/impulse2.wav");
     }
 }
-
+/*
 var slider = document.getElementById("data_pic_slider");
 slider.oninput = function() {
+
 	var v = parseInt(slider.value) + 1; //super hacky
 	change_imagery_layer("img/data/lstd_0" + v + "_c.PNG");
 	img_update("img/data/lstd_0" + v + "_gs.PNG");
+	
 }
-
+*/
 var selector = document.getElementById("selector")
 selector.addEventListener("change", function() {
     change_sample_bank(selector.value);
@@ -489,3 +492,5 @@ document.getElementById("unmute_btn").addEventListener("click", function() {
 	document.getElementById("unmute_btn").disabled = true;
 	document.getElementById("mute_btn").disabled = false;
 });
+			  
+			 }());

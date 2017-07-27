@@ -1,4 +1,16 @@
 <!DOCTYPE HTML>
+<body id="body">
+<input id="gen_rep" type="number" value="100">
+<button id="gen">Generate</button>
+<button id="genrn">Generate (note-rhythm dependent)</button>
+<button id="clear">Clear buffer</button>
+	<input type="range" id="data_pic_slider" max="2" min="0" step="1" value="0">
+	
+<div style="margin-top:50px">
+    <canvas id="data_canvas" width="3600" height="1800" style="z-index:-2; border:0px; solid #AAA; position:absolute; left:0; top:0;">Canvas didn't work!</canvas>
+    <canvas id="display_canvas" width="3600" height="1800" style="z-index:-1; margin-bottom:0px; border:0px; solid #AAA; position:absolute; left:0; top:0;">Canvas didn't work!</canvas>
+</div>
+</body>
 
 <script src="js/mus.js"></script>
 <script src="js/index-web-audio.js"></script>

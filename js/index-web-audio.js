@@ -154,13 +154,9 @@ function add_convolution(bus_num, impulse = "snd/imp/impulse.wav", loc = 1) {
     var fx_array = [];
     var fx_dry_gain = context.createGain();
     var fx_wet_gain = context.createGain();
-    var soundSource;
-    soundSource = context.createBufferSource();
-    
+
     load_sample(impulse, function(b) {
             fx.buffer = b;
-            soundSource.buffer = b;
-            soundSource.loop = true;
             });
     
     fx_array.push(fx);
@@ -375,26 +371,33 @@ function triggerADHSR(bus_num, time) {
     buses[bus_num].forEach(function(effect){
         if((effect[0] instanceof GainNode) && (effect[3]) instanceof Array) {
             var time_rel = context.currentTime + time;
-            effect[0].gain.linearRampToValueAtTime(0.0, time_rel + 0.01);
+			effect[0].gain.cancelScheduledValues(time_rel);
+			effect[0].gain.setValueAtTime(effect[0].gain.value, time_rel);
             //Attack
-            time_rel += effect[3][0];
+            time_rel += effect[3][0]+0.001;
             effect[0].gain.linearRampToValueAtTime(1.0, time_rel);
             //Decay to sustain level
             time_rel += effect[3][1]
             effect[0].gain.linearRampToValueAtTime(effect[3][3], time_rel);
             //Hold then ramp to 0 at release time
             time_rel += effect[3][2];
-            effect[0].gain.linearRampToValueAtTime(effect[3][3], time_rel);
+			effect[0].gain.setValueAtTime(effect[3][3], time_rel);
             time_rel += effect[3][4];
-            effect[0].gain.linearRampToValueAtTime(0.0, time_rel);
+            effect[0].gain.linearRampToValueAtTime(0.01, time_rel+0.01);
+			effect[0].gain.cancelScheduledValues(time_rel+0.01);
         }
     });
 }
 
 //Samples?
 //takes midi numbers and delay time from NOW
-function playMidiNote(bus_num, osc_num, note, time, sync) {
+function playMidiNote(bus_num, osc_num, note, time, sync, ch=false) {
     buses[bus_num][0][osc_num].frequency.setValueAtTime(midiToFreq(note), context.currentTime+time);
+	if(ch == false) {
+		buses[bus_num][0].forEach(function(osc){
+			osc.frequency.setValueAtTime(midiToFreq(note), context.currentTime+time);
+		});
+	}
     //ADHSR envelopes
     triggerADHSR(bus_num, time);
     //Looks for frequency modulators and adjusts them if sync is on.
@@ -421,14 +424,11 @@ function playProgression(bus_num, sequence) {
 //Also you can play regular notes and dyads if you really want
 //Now works with multiple frequency modulators!
 function playChord(bus_num, chord, time, sync = true) {
-    chord.forEach(function(note, index) {
-        if(index < buses[bus_num][0].length) {
-            playMidiNote(bus_num, index, note, time, sync);
-        }
-        else {
-            console.log("Ran out of oscillators");
-        }
-    });
+	buses[bus_num][0].forEach(function(osc, index){
+		playMidiNote(bus_num, index, chord[Math.floor((chord.length - 1)/(buses[bus_num][0].length - 1)*index)], time, sync, (chord.length > 1) ? true : false);
+	});
+
+	//What if there are more oscs than we need?
 }
 
 //Data-related stuff
