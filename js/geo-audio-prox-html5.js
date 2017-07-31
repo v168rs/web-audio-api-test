@@ -1,198 +1,23 @@
-(function () {"use strict";
+//http://www.music.army.mil/music/nationalanthem/
+//US Navy Band
+//https://web-beta.archive.org/web/20030827154715/http://www.navyband.navy.mil:80/anthems/all_countries.htm
+//MP3s are kept at https://drive.google.com/open?id=0B6_a4sq0zv4FRnFhajFJNkdRREU
+//Freesound.org
+//Ogg files are kept at https://drive.google.com/open?id=0B6_a4sq0zv4FVnFWc1dFMlhOTWM
+//Flags are kept at https://drive.google.com/open?id=0B6_a4sq0zv4FT0N2TUNwb3ZqNnc
+//Kosovo and South Sudan are special because they have no flag here
+/*(function () {*/
+"use strict";
 //Special system specifically for geotagged samples
 //Requires Cesium.js
 //National anthems (soundfile, lat, long, flagicon) maybe volume too (do something cool like volume proportional to GDP)
 
-//TODO: Use JSON instead of this giant array to store URLs, lat/lons, etc
-
-			  
-//Massive list of audio samples that should probably be moved somewhere else
-var geo_audio_samples = [[
-        ["snd/usa.mp3", 38.8977, -77.0365, "img/us.png"],     //http://www.music.army.mil/music/nationalanthem/
-        ["snd/canada.mp3", 45.421530, -75.697193, "img/ca.png"],
-        ["snd/china.mp3", 39.904200, 116.407396, "img/cn.png"],
-        ["snd/japan.mp3", 35.689487, 139.691706, "img/jp.png"],
-        ["snd/cuba.mp3", 23.113592, -82.366596, "img/cu.png"],
-        ["snd/mexico.mp3", 19.432608, -99.133208, "img/mx.png"],
-        ["snd/italy.mp3", 41.902783, 12.496366, "img/it.png"],
-        ["snd/russia.mp3", 55.755826, 37.617300, "img/ru.png"],
-        ["snd/uk.mp3", 51.507351, -0.127758, "img/gb.png"],
-        ["snd/australia.mp3", -35.280937, 149.130009, "img/au.png"],
-        ["snd/spain.mp3", 40.416775, -3.703790, "img/es.png"],
-        ["snd/germany.mp3", 52.520007, 13.404954, "img/de.png"],
-        ["snd/france.mp3", 48.856614, 2.352222, "img/fr.png"],
-        ["snd/india.mp3", 28.613939, 77.209021, "img/in.png"],
-        ["snd/philippines.mp3", 14.599512, 120.984219, "img/ph.png"],
-        ["snd/portugal.mp3", 38.722252, -9.139337, "img/pt.png"],
-        ["snd/afghanistan.mp3", 34.5553, 69.2075, "img/af.png"],
-        ["snd/austria.mp3", 48.2082, 16.3738, "img/at.png"],
-        ["snd/brazil.mp3", -15.7942, -47.8825, "img/br.png"],
-        ["snd/chile.mp3", -33.4489, -70.6693, "img/cl.png"],
-        ["snd/czech_republic.mp3", 50.0755, 14.4378, "img/cz.png"],
-        ["snd/south_korea.mp3", 37.5665, 126.9780, "img/kr.png"],
-        ["snd/vietnam.mp3", 21.0278, 105.8342, "img/vn.png"],
-        ["snd/iran.mp3", 35.6892, 51.3890, "img/ir.png"],
-        ["snd/israel.mp3", 31.7683, 35.2137, "img/il.png"],
-        ["snd/algeria.mp3", 36.753889, 3.058889, "img/dz.png"],
-        ["snd/tanzania.mp3", -6.1630, 35.7516, "img/tz.png"],
-        ["snd/rwanda.mp3", -1.9706, 30.1044, "img/rw.png"],
-        ["snd/nigeria.mp3", 9.0765, 7.3986, "img/ng.png"],
-        ["snd/morocco.mp3", 34.03, -6.83, "img/ma.png"],
-        ["snd/botswana.mp3", -24.6282, 25.9231, "img/bw.png"],
-        ["snd/albania.mp3", 41.316667, 19.816667, "img/al.png"],
-        ["snd/angola.mp3", 42.5, 1.517, "img/ao.png"],
-        ["snd/antigua_and_barbuda.mp3", 17.117, -61.85, "img/ag.png"],
-        ["snd/armenia.mp3", 40.17, 44.5, "img/am.png"],
-        ["snd/aruba.mp3", 12.517, -70.03, "img/aw.png"],
-        ["snd/azerbaijan.mp3", 40.383, 49.87, "img/az.png"],
-        ["snd/bahamas.mp3", 25.083, -77.35, "img/bs.png"],
-        ["snd/bahrain.mp3", 26.23, 50.57, "img/bh.png"],
-        ["snd/bangladesh.mp3", 23.717, 90.4, "img/bd.png"],
-        ["snd/barbados.mp3", 13.1, -59.617, "img/bb.png"],
-        ["snd/belarus.mp3", 53.9, 27.57, "img/by.png"],
-        ["snd/belgium.mp3", 50.83, 4.3, "img/be.png"],
-        ["snd/belize.mp3", 17.25, -88.77, "img/bz.png"],
-        ["snd/benin.mp3", -34.6037, -58.3816, "img/bj.png"],
-        ["snd/bolivia.mp3", -16.5, -68.15, "img/bo.png"],
-        ["snd/bosnia_and_herzegovina.mp3", 43.87, 18.417, "img/ba.png"],
-        ["snd/brunei.mp3", 4.883, 114.93, "img/bn.png"],
-        ["snd/burkina-faso.mp3", 12.37, -1.517, "img/bf.png"],
-        ["snd/bulgaria.mp3", 42.683, 23.317, "img/bg.png"],
-        ["snd/cambodia.mp3", 11.55, 104.917, "img/kh.png"],
-        ["snd/cameroon.mp3", 3.87, 11.517, "img/cm.png"],
-        ["snd/cape_verde.mp3", 14.917, -23.517, "img/cv.png"],
-        ["snd/central_african_republic.mp3", 4.37, 18.583, "img/cf.png"],
-        ["snd/colombia.mp3", 4.6, -74.083, "img/co.png"],
-        ["snd/comoros.mp3", -11.7, 43.23, "img/km.png"],
-        ["snd/congo.mp3", -4.317, 15.3, "img/cd.png"],
-        ["snd/cook_islands.mp3", -21.2, -159.77, "img/km.png"],
-        ["snd/cote_d'ivoire.mp3", 6.817, -5.27, "img/ci.png"],
-        ["snd/costa_rica.mp3", -9.93, -84.083, "img/cr.png"],
-        ["snd/croatia.mp3", 45.8, 16, "img/hr.png"],
-        ["snd/djibouti.mp3", 11.583, 43.15, "img/dj.png"],
-        ["snd/dominican_republic.mp3", 18.47, -69.9, "img/do.png"],
-        ["snd/denmark.mp3", 55.7, 12.583, "img/dk.png"],
-        ["snd/east_timor.mp3", -8.583, 125.6, "img/tl.png"],
-        ["snd/ecuador.mp3", -0.217, -78.5, "img/ec.png"],
-        ["snd/egypt.mp3", 30.05, 31.25, "img/eg.png"],
-        ["snd/el_salvador.mp3", -34.6037, -58.3816, "img/ar.png"],
-        ["snd/eritrea.mp3", 15.3, 38.93, "img/er.png"],
-        ["snd/estonia.mp3", 59.43, 24.717, "img/ee.png"],
-        ["snd/ethiopia.mp3", 9.03, 38.7, "img/et.png"],
-        ["snd/fiji.mp3", -18.13, 178.417, "img/fj.png"],
-        ["snd/finland.mp3", 60.17, 24.93, "img/fi.png"],
-        ["snd/gabon.mp3", 0.38, 9.45, "img/ga.png"],
-        ["snd/gambia.mp3", 13.45, -16.57, "img/gm.png"],
-        ["snd/georgia.mp3", 41.683, 44.83, "img/ge.png"],
-        ["snd/ghana.mp3", 5.55, -0.217, "img/gh.png"],
-        ["snd/guatemala.mp3", 14.617, -90.517, "img/gt.png"],
-        ["snd/guinea.mp3", 9.5, -13.7, "img/gn.png"],
-        ["snd/guinea-bissau.mp3", 11.85, -15.583, "img/gw.png"],
-        ["snd/guyana.mp3", -6.8, -58.15, "img/gy.png"],
-        ["snd/haiti.mp3", 18.53, -72.3, "img/ht.png"],
-        ["snd/honduras.mp3", 14.1, -87.217, "img/hn.png"],
-        ["snd/hungary.mp3", 47.5, 19.083, "img/hu.png"],
-        ["snd/iceland.mp3", 64.15, -21.95, "img/is.png"],
-        ["snd/indonesia.mp3", -6.17, 106.817, "img/id.png"],
-        ["snd/iraq.mp3", -33.3, 44.4, "img/iq.png"],
-        ["snd/ireland.mp3", 53.317, -6.23, "img/ie.png"],
-        ["snd/jamaica.mp3", 18, -76.8, "img/jm.png"],
-        ["snd/jordan.mp3", 31.95, 35.93, "img/jo.png"],
-        ["snd/kazakhstan.mp3", 51.17, 71.417, "img/kz.png"],
-        ["snd/kenya.mp3", -1.283, 36.817, "img/ke.png"],
-        ["snd/kosovo.mp3", 42.7, 21.17, "img/ko.png"],
-        ["snd/kuwait.mp3", 29.37, 47.97, "img/kw.png"],
-        ["snd/kyrgyzstan.mp3", 42.87, 74.6, "img/ar.png"],
-        ["snd/laos.mp3", 17.97, 102.6, "img/la.png"],
-        ["snd/latvia.mp3", 56.95, 24.1, "img/lv.png"],
-        ["snd/lebanon.mp3", 33.87, 35.5, "img/lb.png"],
-        ["snd/liberia.mp3", 6.3, -10.8, "img/lr.png"],
-        ["snd/liechtenstein.mp3", 47.13, 9.517, "img/li.png"],
-        ["snd/lithuania.mp3", 54.683, 25.317, "img/lt.png"],
-        ["snd/luxembourg.mp3", 49.6, 6.117, "img/lu.png"],
-        ["snd/libya.mp3", 32.883, 13.17, "img/ly.png"],
-        ["snd/macedonia.mp3", 42, 21.43, "img/mk.png"],
-        ["snd/madagascar.mp3", -18.917, 47.517, "img/mg.png"],
-        ["snd/malawi.mp3", -13.97, 33.783, "img/mw.png"],
-        ["snd/maldives.mp3", 4.17, 73.5, "img/mv.png"],
-        ["snd/malta.mp3", 35.883, 14.5, "img/mt.png"],
-        ["snd/marshall_islands.mp3", 7.1, 171.383, "img/mh.png"],
-        ["snd/mauritania.mp3", 18.1, -15.95, "img/mr.png"],
-        ["snd/mauritius.mp3", -20.15, 57.483, "img/mu.png"],
-        ["snd/micronesia.mp3", 6.917, 158.15, "img/fm.png"],
-        ["snd/moldova.mp3", 47, 28.85, "img/md.png"],
-        ["snd/monaco.mp3", 43.73, 7.417, "img/mc.png"],
-        ["snd/montenegro.mp3", 42.43, 19.27, "img/me.png"],
-        ["snd/mozambique.mp3", -25.95, 32.583, "img/mz.png"],
-        ["snd/myanmar.mp3", 16.8, 96.15, "img/mm.png"],
-        ["snd/namibia.mp3", -22.57, 17.083, "img/na.png"],
-        ["snd/nepal.mp3", 27.717, 85.317, "img/np.png"],
-        ["snd/netherlands.mp3", 52.35, 4.917, "img/nl.png"],
-        ["snd/malaysia.mp3", 3.17, 101.7, "img/my.png"],
-        ["snd/new_zealand.mp3", -41.3, 174.783, "img/nz.png"],
-        ["snd/nicaragua.mp3", 12.13, -86.25, "img/ni.png"],
-        ["snd/norway.mp3", 59.917, 10.75, "img/no.png"],
-        ["snd/oman.mp3", 23.617, 58.583, "img/om.png"],
-        ["snd/pakistan.mp3", 33.683, 73.05, "img/pk.png"],
-        ["snd/panama.mp3", 8.97, -79.53, "img/pa.png"],
-        ["snd/papua_new_guinea.mp3", -9.45, 147.183, "img/pg.png"],
-        ["snd/peru.mp3", -12.05, -77.05, "img/pe.png"],
-        ["snd/philippines.mp3", 14.6, 120.97, "img/ph.png"],
-        ["snd/poland.mp3", 52.25, 21, "img/pl.png"],
-        ["snd/qatar.mp3", 25.283, 51.53, "img/qa.png"],
-        ["snd/romania.mp3", 44.43, 26.1, "img/ro.png"],
-        ["snd/sao_tome_and_principe.mp3", 0.3, 6.73, "img/st.png"],
-        ["snd/saudi_arabia.mp3", 24.65, 46.7, "img/sa.png"],
-        ["snd/senegal.mp3", -14.73, -17.63, "img/sn.png"],
-        ["snd/serbia.mp3", 44.83, 20.5, "img/rs.png"],
-        ["snd/seychelles.mp3", -4.617, -55.45, "img/sc.png"],
-        ["snd/sierra_leone.mp3", 8.483, -13.23, "img/sl.png"],
-        ["snd/singapore.mp3", 1.283, 103.85, "img/sg.png"],
-        ["snd/slovak_republic.mp3", 48.15, 17.117, "img/sk.png"],
-        ["snd/slovenia.mp3", 46.05, 14.5117, "img/si.png"],
-        ["snd/south_sudan.mp3", 4.85, 31.617, "img/ss.png"],
-        ["snd/south_africa.mp3", -25.7, 28.217, "img/za.png"],
-        ["snd/sri_lanka.mp3", 6.917, 79.83, "img/lk.png"],
-        ["snd/st_kitts_and_nevis.mp3", 17.3, -62.717, "img/kn.png"],
-        ["snd/sudan.mp3", 15.6, 32.53, "img/sd.png"],
-        ["snd/swaziland.mp3", -26.317, 31.13, "img/sz.png"],
-        ["snd/sweden.mp3", 59.3, 18.05, "img/se.png"],
-        ["snd/syria.mp3", 33.5, 36.3, "img/sy.png"],
-        ["snd/togo.mp3", 6.117, 1.217, "img/tg.png"],
-        ["snd/trinidad_and_tobago.mp3", 10.65, -61.517, "img/tt.png"],
-        ["snd/thailand.mp3", 13.75, 100.517, "img/th.png"],
-        ["snd/tunisia.mp3", 36.8, 10.183, "img/tn.png"],
-        ["snd/turkey.mp3", 39.93, 32.87, "img/tr.png"],
-        ["snd/turkmenistan.mp3", 37.95, 58.383, "img/tm.png"],
-        ["snd/ukraine.mp3", 50.43, 30.517, "img/ua.png"],
-        ["snd/united_arab_emirates.mp3", 24.47, 54.37, "img/ae.png"],
-        ["snd/uzbekistan.mp3", 41.317, 69.25, "img/uz.png"],
-        ["snd/vanuatu.mp3", -17.73, 168.317, "img/vu.png"],
-        ["snd/vatican.mp3", 41.9, 12.45, "img/va.png"],
-        ["snd/venezuela.mp3", 10.483, -66.8667, "img/ve.png"],
-        ["snd/virgin_islands.mp3", 18.35, -64.93, "img/vi.png"],
-        ["snd/uruguay.mp3", -34.85, -56.17, "img/uy.png"],
-        ["snd/yemen.mp3", 15.35, 44.2, "img/ye.png"]
-    //US Navy Band
-    //https://web-beta.archive.org/web/20030827154715/http://www.navyband.navy.mil:80/anthems/all_countries.htm
-    //MP3s are kept at https://drive.google.com/open?id=0B6_a4sq0zv4FRnFhajFJNkdRREU
-    ],[
-        ["snd/env/jfny.ogg", 41.7909607694, -74.9167156219], //Outside a barn in Jefferson, NY
-        ["snd/env/sfca1.ogg", 37.718873622, -122.473933697], //Traffic on 19th Avenue
-        ["snd/env/sfca2.ogg", 37.7864449554, -122.408093512], //Traffic on Powell
-        ["snd/env/sfca3.ogg", 37.784780933, -122.407699227], //Cable car
-        ["snd/env/kbca.ogg", 39.2351617333, -120.023671389], //Kings Beach, Lake Tahoe (CA)
-        ["snd/env/gvca.ogg", 38.9551372254, -120.602416992], //Pond in Grass Valley, Nevada County, CA
-        ["snd/env/cdco.ogg", 39.5564712836, -107.298660278], //Roaring Fork River in Carbondale, CO
-        ["snd/env/ny1.ogg", 40.7359741672, -73.9904308319] //Union Square, New York
-    ]
-    //Freesound.org
-    //These ogg files are kept at https://drive.google.com/open?id=0B6_a4sq0zv4FVnFWc1dFMlhOTWM
-];
-//Flags are kept at https://drive.google.com/open?id=0B6_a4sq0zv4FT0N2TUNwb3ZqNnc
+//Stored in JSON
+var geo_audio_samples = [],
+    ready = false;
 
 //Audio attributes that vary depending on sound set: reverb impulse, inner cone (no volume reduction), outer cone
-var geo_audio_attributes = [["snd/imp/impulse.wav", 10, 140], ["snd/imp/impulse3.wav", 90, 180]];
+var geo_audio_attributes = [];
 
 //Takes a path/URL to the sample and a callback that receives the arraybuffer data as a parameter. MOSTLY DEPRECATED AND ONLY USED FOR CONVOLUTION REVERB.
 function load_sample(sample, buffer_receiver) {
@@ -296,7 +121,7 @@ function find_prox_nodes(range = 2000000, audio_selector = 0, lat, long, max_nod
             ind_arr.push(index);
             dist_arr.push(dist);
         }
-        else if(geo_buses[index] && (geo_buses[index][0] instanceof MediaElementAudioSourceNode)) { //Look for nodes that are playing outside of range...
+        else if(geo_buses[index][0] && (geo_buses[index][0] instanceof MediaElementAudioSourceNode)) { //Look for nodes that are playing outside of range...
             rej_arr.push(index);
         }
     });
@@ -313,8 +138,7 @@ function find_prox_nodes(range = 2000000, audio_selector = 0, lat, long, max_nod
        return ind_arr[index];
     });
     //Then slice to fit
-    ind_arr = ind_arr.slice(0, max_nodes-listening_nodes);
-    
+    ind_arr = ind_arr.slice(0, max_nodes);
     if(ind_arr[0] && (listening_nodes < max_nodes)) {
         ind_arr.forEach(function(index){
             if((geo_buses[index][0] === undefined) || (geo_buses[index][0] === null)) { //If there isn't already a sound there
@@ -365,17 +189,15 @@ function set_listener_loc(x, y, z, fx, fy, fz, ux, uy, uz) {
     context.listener.setPosition(x, y, z);
     context.listener.setOrientation(fx, fy, fz, ux, uy, uz);
 }
-			  
-geo_init();
 
 //Cesium stuff
 var viewer = new Cesium.Viewer('cesiumContainer', {"sceneModePicker" : false, "timeline" : false}); //Scenemodepicker makes the camera position weird in some modes so we got rid of it
 var camera = viewer.camera;
-camera.changed.addEventListener(function() {
+camera.changed.addEventListener(function() { if(ready) {
     set_listener_loc(camera.position["x"], camera.position["y"], camera.position["z"], camera.direction["x"], camera.direction["y"], camera.direction["z"], camera.up["x"], camera.up["y"], camera.up["z"]);
     find_prox_nodes(1000000, cur_audio_selector, camera.positionCartographic["latitude"], camera.positionCartographic["longitude"]);
 	//filter.frequency.linearRampToValueAtTime(map(cur_stat, 0, 1, 100, 6000), context.currentTime+1);
-                                           });
+                                           }});
 
 //Stress testing function
 function repeat_listener_rand_loc(rep = 100) {
@@ -400,7 +222,7 @@ function place_billboard(bx, by, bz, b_img) {
 }
 
 //Initializes panners at preset locations with orientation away from the Earth's surface. Doesn't actually create samples.
-function create_samples_with_loc(audio_selector = 0, cone_inner = 10, cone_outer = 140){
+function create_samples_with_loc(audio_selector = 0, cone_inner = 30, cone_outer = 150){
     geo_audio_samples[audio_selector].forEach(function(arr){
         var geo_bus = [];
         var panner = context.createPanner();
@@ -432,7 +254,6 @@ function create_samples_with_loc(audio_selector = 0, cone_inner = 10, cone_outer
     });
 }
 
-create_samples_with_loc(0);
 //Test of imagery layers
 /* viewer.scene.imageryLayers.addImageryProvider(new Cesium.SingleTileImageryProvider({url: "img/data/lstd_01_c.PNG"}));
 
@@ -460,13 +281,90 @@ function change_sample_bank(audio_selector = 0) {
     geo_buses = [];
     //clear icons
     viewer.entities.removeAll();
-    create_samples_with_loc(audio_selector, geo_audio_attributes[audio_selector][1], geo_audio_attributes[audio_selector][2]);
+    console.log(geo_audio_attributes);
     if(geo_audio_attributes[audio_selector]) {
         change_impulse(geo_audio_attributes[audio_selector][0]);
+        create_samples_with_loc(audio_selector, geo_audio_attributes[audio_selector][1], geo_audio_attributes[audio_selector][2]);
     }
     else {
-        change_impulse("snd/imp/impulse2.wav");
+        change_impulse("snd/imp/impulse.wav");
+        create_samples_with_loc(audio_selector);
     }
+}
+    
+function general_audio_load(arr) { //helper function don't call this
+    return new Promise(function(resolve) {
+        var i;
+        for(i = 0; i < arr.length - 1; i++) {
+            var getText1 = new XMLHttpRequest();
+            getText1.open("GET", "json/geo_audio_attributes_" + arr[i] + ".json", true);
+            getText1.responseType = "json";
+            getText1.onload = function() {
+                geo_audio_attributes.push(getText1.response);
+            }
+            getText1.send();
+        }
+        for(i = 0; i < arr.length - 1; i++) {
+            var getText = new XMLHttpRequest();
+            getText.open("GET", "json/geo_audio_samples_" + arr[i] + ".json", true);
+            getText.responseType = "json";
+            console.log(i);
+            if (!((i + 1) < arr.length - 1)) {
+                getText.onload = function() {
+                geo_audio_samples.push(getText.response);
+                resolve("Completed request");
+            }
+            }
+            else {
+                getText.onload = function() {
+                geo_audio_samples.push(getText.response);
+            }
+            }
+            getText.send();
+        }
+            });
+}
+              
+function load_audio_urls() { //actually initializes everything
+    var geo_audio_sample_urls = [];
+    var getMeta = new XMLHttpRequest();
+    getMeta.open("GET", "json/meta.json", true)
+    getMeta.onload = function() {
+        geo_audio_sample_urls = JSON.parse(getMeta.responseText);
+        general_audio_load(geo_audio_sample_urls).then(function() {
+            var getText = new XMLHttpRequest();
+            getText.open("GET", "json/geo_audio_samples_" + geo_audio_sample_urls[geo_audio_sample_urls.length - 1] + ".json", true);
+            getText.onload = function() {
+                geo_audio_samples.push(JSON.parse(getText.responseText));
+                console.log(geo_audio_samples);
+                getText.open("GET", "json/geo_audio_attributes_" + geo_audio_sample_urls[geo_audio_sample_urls.length - 1] + ".json", true);
+                getText.responseType = "json";
+                getText.onload = function() {
+                    geo_audio_attributes.push(getText.response);
+                    geo_init();
+                    create_samples_with_loc(0);
+                    ready = true;
+                }
+                getText.send();
+            }
+            getText.send();
+        });
+        var selector = document.getElementById("selector")
+        geo_audio_sample_urls.forEach(function(b, i) {
+            selector.innerHTML += "<option value=\"" + i + "\">" + b + "</option>"
+        });
+        selector.addEventListener("change", function() {
+            change_sample_bank(selector.value);
+        });
+    }
+    getMeta.send();
+}
+
+load_audio_urls();
+
+function reload_audio_urls() {
+    ready = false;
+    load_audio_urls();
 }
 
 			  /*
@@ -479,10 +377,6 @@ slider.oninput = function() {
 	
 }
 */
-var selector = document.getElementById("selector")
-selector.addEventListener("change", function() {
-    change_sample_bank(selector.value);
-});
 
 document.getElementById("mute_btn").addEventListener("click", function() {
 	master_gain.gain.setValueAtTime(0, context.currentTime);
@@ -497,6 +391,7 @@ document.getElementById("unmute_btn").addEventListener("click", function() {
 });
 
 document.getElementById("cesiumContainer").ondrop = function(event) {
+    console.log(event.clientX);
 	this.style.opacity = 1;
 	event.stopPropagation();
 	event.preventDefault();
@@ -512,18 +407,25 @@ document.getElementById("cesiumContainer").ondrop = function(event) {
 					fr.onload = function(file) {
 						//audio is stored in fr.result but this may not be the best way to go about it
 					}
-					//geo_audio_samples[3].push(f)
 				}
 			}
 			else {
 				dt.items[i].getAsString(function(str) {
-					console.log(str);
+                    var url_push = new XMLHttpRequest();
+                    url_push.open("POST", "", true);
+                    url_push.send(str);
 				});
 			}
 		}
 		
 	}
 }
+
+//Function to create new sound set
+//Draggable only on new sound sets
+//Password system for sound sets?
+//Keep track of all urls and icons added
+//Have an append queue for the JSON on the server
 
 document.getElementById("cesiumContainer").ondragenter = function(event) {
 	this.style.opacity = 0.4;
@@ -539,5 +441,5 @@ document.getElementById("cesiumContainer").ondragover = function(event) {
 	event.dataTransfer.dropEffect = "move";
 	}
 			  
-			 }());
+/*			 }());*/
 
