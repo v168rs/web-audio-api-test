@@ -4,38 +4,40 @@
 <style>
     @import url(js/Cesium/Widgets/widgets.css);
 	body {
-		background-color: black;
+		background-color: #111;
 		font-family: "Open Sans";
+		color:dodgerblue;
 	}
 	button {
 		border: 5px;
 		border-radius: 5px;
 		margin:5px;
+		margin-bottom:20px;
 		padding:10px;
 		font-family: "Open Sans";
 		color:dodgerblue;
-		background-color:#222222;
+		background-color:#222;
 		outline:0;
 	}
 	button:hover {
 		cursor: pointer;
-		background-color:#333333;
+		background-color:#333;
 	}
 	button:disabled {
-		color:#444444;
+		color:#444;
 	}
 	select {
 		border: 5px;
 		border-radius: 5px;
-		margin-top: 10px;
 		padding:10px;
 		font-family: "Open Sans";
 		color:dodgerblue;
-		background-color:#222222;
+		background-color:#222;
 		outline:0;
 	}
 </style>
 <body>
+	<h1 style="display:inline; margin-right:5px;">placeholder </h1>
     <select id="selector">
         <option value="0">World Anthems</option>
         <option value="1">USA Environment</option>
@@ -43,7 +45,7 @@
     <a href="index.html"><button>Back to index</button></a>
     <button id="mute_btn">Mute</button>
 	<button disabled id="unmute_btn">Unmute</button>
-	<div id="cesiumContainer" class="fullSize"></div>
+	<div id="cesiumContainer" draggable="true" class="fullSize"></div>
 	<!--<input type="range" id="data_pic_slider" max="11" min="0" step="1" value="0">-->
 </body>
 <script src="js/Cesium/Cesium.js"></script>
