@@ -146,6 +146,7 @@ function find_prox_nodes(range = 2000000, lat, long, max_nodes = 7) {
         ind_arr.forEach(function(index){
             //console.log("Doing check");
             if((geo_buses[index][0] === undefined) || (geo_buses[index][0] === null)) { //If there isn't already a sound there
+                var html5_audio = new Audio(geo_audio_samples[index][0]);
                 //console.log("Playing audio " + geo_audio_samples[index][0]);
                 html5_audio.crossOrigin = "anonymous";
                 /*html5_audio.autoplay = true;*/
