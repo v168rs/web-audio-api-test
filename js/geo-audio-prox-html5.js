@@ -126,8 +126,9 @@ function find_prox_nodes(range = 2000000, lat, long, max_nodes = 7) {
         }
     });
     rej_arr.forEach(function(index) { //Pause and delete nodes out of range.
-        geo_buses[index][0].disconnect();
-        if(!geo_buses[index][0].paused) {geo_buses[index][0].mediaElement.pause();}
+        var samp = geo_buses[index][0];
+        samp.disconnect();
+        if(!samp.mediaElement.paused && !samp.mediaElement.ended && samp.mediaElement.currentTime > 0 && samp.readyState > 2) {samp.mediaElement.pause();} //actually necessary
         geo_buses[index][0] = null;
         listening_nodes -= 1;
         viewer.entities.getById(String(index)).billboard.scale = 1;
@@ -140,16 +141,18 @@ function find_prox_nodes(range = 2000000, lat, long, max_nodes = 7) {
     });
     //Then slice to fit
     ind_arr = ind_arr.slice(0, max_nodes);
-    if(ind_arr[0] && (listening_nodes < max_nodes)) {
+    //console.log(ind_arr);
+    if(ind_arr[0] !== undefined) {
         ind_arr.forEach(function(index){
+            //console.log("Doing check");
             if((geo_buses[index][0] === undefined) || (geo_buses[index][0] === null)) { //If there isn't already a sound there
-                var html5_audio = new Audio(geo_audio_samples[index][0]);
-                //How do catch DOMException ? ? ?
+                //console.log("Playing audio " + geo_audio_samples[index][0]);
                 html5_audio.crossOrigin = "anonymous";
+                /*html5_audio.autoplay = true;*/
+                //TODO: how to defeat CORS 101
                 var audio_source = context.createMediaElementSource(html5_audio); //Creates an HTML5 audio element that points to a specific URL.
                 audio_source.mediaElement.loop = true; //Why not a regular WebAudioAPI AudioBufferSourceNode? Because for some reason those leak memory like crazy.
                 audio_source.mediaElement.play(); //It has something to do with array buffers.
-                //How do catch DOMException ? ? ?
                 //Update billboard
                 geo_buses[index][0] = audio_source;
                 audio_source.connect(geo_buses[index][1]);
@@ -234,6 +237,14 @@ function place_billboard(bx, by, bz, b_img, id = 0) {
 
 //Initializes panners at preset locations with orientation away from the Earth's surface. Doesn't actually create samples.
 function create_samples_with_loc(cone_inner = 30, cone_outer = 150){
+     geo_buses.forEach(function(bus) {
+        if(bus[0] instanceof MediaElementAudioSourceNode) {
+            bus[0].loop = false;
+            bus[0].disconnect();
+            bus[0] = null;
+        }
+        bus[1].disconnect();
+    });
     geo_buses = [];
     geo_audio_samples.forEach(function(arr, index){
         var geo_bus = [];
@@ -366,14 +377,18 @@ slider.oninput = function() {
 
 //
 
-//takes a URL and Cesium cartesian object as input
+//for updating after changes are made to sound sets
+function update_geo() {
+    viewer.entities.removeAll();
+    create_samples_with_loc(geo_audio_attributes[1], geo_audio_attributes[2]);
+    find_prox_nodes(1000000, camera.positionCartographic["latitude"], camera.positionCartographic["longitude"]);
+}
+
 //takes a URL and Cesium cartesian object as input
 function new_sound(src, loc) {
     var latlon = Cesium.Ellipsoid.WGS84.cartesianToCartographic(loc);
     geo_audio_samples.push([src, rad2deg(latlon.latitude), rad2deg(latlon.longitude)]);
-    viewer.entities.removeAll();
-    create_samples_with_loc(geo_audio_attributes[1], geo_audio_attributes[2]); //disgusting
-    find_prox_nodes(1000000, camera.positionCartographic["latitude"], camera.positionCartographic["longitude"]);
+    update_geo();
 }
 
 //deletes sound of selected entity
@@ -381,17 +396,11 @@ function del_sound() {
     if(!viewer.selectedEntity) {
         return;
     }
-    var id = viewer.selectedEntity._index;
-    var bus = geo_buses[id];
-    if(bus) {
-        if(bus[0] instanceof MediaElementAudioSourceNode) {
-            bus[0].loop = false;
-            bus[0].disconnect();
-            bus[0] = null;
-        }
-        bus[1].disconnect();
-    }
-    viewer.entities.removeById(id);
+    console.log(viewer.selectedEntity);
+    var id = viewer.selectedEntity._id;
+    console.log("deleting " + id);
+    geo_audio_samples.splice(id, 1);
+    update_geo();
 }
 
 //delete_sound
@@ -401,10 +410,23 @@ function del_sound() {
 //Function to create new sound set
 function new_sound_set() {
     geo_audio_samples = [];
-    geo_audio_attributes = ["snd/imp/impulse.wav", 30, 150];
+    geo_audio_attributes = ["snd/imp/impulse2.wav", 30, 150];
     change_sample_bank("custom");
     //probably more complicated than this but we'll figure it out later
 }
+
+function verify_audio_file(array_buffer) { //this doesn't explicitly confirm the type; just that it's html5 audio-compatible
+    var uint_arr = new Uint8Array(array_buffer),
+        gen_audio_view = [uint_arr.subarray(0, 2), uint_arr.subarray(0, 3), uint_arr.subarray(0, 4)],
+        gen_audio_str = ["", "", ""];
+    gen_audio_view.forEach(function(uar, index) {
+        for(var i = 0; i < uar.length; i++) {
+            gen_audio_str[index] += uar[i].toString(16);
+        }
+    });
+    return ((gen_audio_str[0] == "fffb") || (gen_audio_str[1] == "494433") || (gen_audio_str[2] == "664c6143") || (gen_audio_str[2] == "4f676753") || (gen_audio_str[2] == "52494646") || (gen_audio_str[2] == "57415645")); //mp3 is such a special snowflake
+}
+
 
 //Posts the current set to server (it could be an unaltered verison of one of the stock sets but preferably you wouldn't do that)
 function post_set() {
@@ -414,13 +436,13 @@ function post_set() {
     var check_xhr = new XMLHttpRequest(),
     json_request = {
         sample_set : geo_audio_samples,
-        attributes : geo_audio_attributes ? geo_audio_attributes : ["snd/imp/impulse.wav", 30, 150]
+        attributes : geo_audio_attributes ? geo_audio_attributes : ["snd/imp/impulse2.wav", 30, 150]
     };
     check_xhr.open("POST", "", true); //the set name becomes a user name
     check_xhr.setRequestHeader("Authorization", "Basic" + btoa(name + ":" + password));
     check_xhr.send(JSON.stringify(json_request));
     check_xhr.onload = function() {
-        if(check_xhr.status == 401) {
+        if(check_xhr.status != 200) {
             //Tell the user that the password isn't correct
             geo_note.innerHTML = "Failed to post: " + check_xhr.response;
         }
@@ -449,8 +471,9 @@ document.getElementById("post_btn").addEventListener("click", function() {
 });
 
 document.getElementById("cesiumContainer").ondrop = function(event) {
+    //TODO STOP DRAG AND DROP FROM DUPING
     var c2 = new Cesium.Cartesian2(event.clientX  - document.getElementById("cesiumContainer").offsetLeft, event.clientY  - document.getElementById("cesiumContainer").offsetTop),
-        result = {};
+        result = {}; //stores ellipsoid coordinates of mouse location
     viewer.camera.pickEllipsoid(c2, viewer.scene.globe.ellipsoid, result);
     this.style.opacity = 1;
 	event.stopPropagation();
@@ -463,31 +486,63 @@ document.getElementById("cesiumContainer").ondrop = function(event) {
 				var f = dt.items[i].getAsFile();
 				if(f.type == "audio/mp3" || f.type == "audio/ogg" || f.type == "audio/wav" || f.type == "audio/flac") {
 					var fr = new FileReader();
-					fr.readAsArrayBuffer(f);
+					fr.readAsArrayBuffer(f); //You may have won the battle, but the war is not over
 					fr.onload = function() {
                         var frq = new XMLHttpRequest();
-                        frq.open("PUT", "", true);
-                        check_xhr.setRequestHeader("Content-Type", f.type);
-                        //Security?!?!
-                        //Content-Type header
-                        //reject 406 if content doesn't match header
-                        frq.send(fr.response);
-                        //new_sound(fr.result, result); //Uh no let's NOT store this thing as a data URL
-                        //new_sound(fr.result, result); //Uh no let's NOT store this thing as a data URL
-                        //PUT
-                        //Maybe send it to node and have it send us back a mini-URL
-						//audio is stored in fr.result but this may not be the best way to go about it
+                        frq.open("POST", "", true);
+                        frq.setRequestHeader('Content-Type', 'application/octet-stream');
+                        frq.setRequestHeader('x-filetype', f.type);
+                        frq.send(fr.result);
+                        //include a progress bar or something so the user doesn't feel like they're waiting several seconds without knowing if anything happened
+                        frq.onload = function() {
+                            if(frq.status == 200) {
+                                new_sound(frq.response, result);
+                            }
+                        }
 					}
-				}
+                }
 			}
-			else {
-				dt.items[0].getAsString(function(str) {
-                    new_sound(str, result);
-				});
-			}
-		}
-		
+        }
+            if(dt.items[0] && !(dt.items[0].kind == "file")) {
+                dt.items[0].getAsString(function(str) {
+                //URL validation
+                var url_val_xhr = new XMLHttpRequest();
+                url_val_xhr.open("GET", str, true);
+                url_val_xhr.responseType = "arraybuffer"
+                url_val_xhr.onload = function() {
+                    if(url_val_xhr.status == 200) {
+                        //Verify audio type
+                        //http://api.soundcloud.com/tracks/204082098/stream?client_id=17a992358db64d99e492326797fff3e8
+                        //https://api.soundcloud.com/tracks/42328219/stream?client_id=b1495e39071bd7081a74093816f77ddb
+                        //http://audionautix.com/Music/JoyToTheWorld.mp3
+                        if(verify_audio_file(url_val_xhr.response)) {
+                            new_sound(str, result);
+                        }
+                        else {
+                            alert("This is not a valid sound (supported formats are mp3, flac, ogg, and wav)");
+                        }
+                    }
+                    else {
+                        alert(str + "This is not a valid URL");
+                    }
+                }
+                url_val_xhr.onerror = function(err) {
+                    if(confirm("This URL may not allow cross-origin requests. The uploaded file will not be validated and may not function properly. Proceed?")) {
+                        new_sound(str, result);
+                    }
+                    //Majority of URLs won't allow you to read data so it might not even be worth including this feature.
+                }
+                url_val_xhr.send();
+                
+            });
+        }
 	}
+}
+
+document.getElementById("body").onkeydown = function(event) {
+    if(event.key && event.key == "Delete") {
+        del_sound();
+    }
 }
 
 document.getElementById("cesiumContainer").ondragenter = function(event) {
