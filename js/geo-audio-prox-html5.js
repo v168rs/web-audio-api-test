@@ -489,16 +489,21 @@ document.getElementById("cesiumContainer").ondrop = function(event) {
 					var fr = new FileReader();
 					fr.readAsArrayBuffer(f); //You may have won the battle, but the war is not over
 					fr.onload = function() {
-                        var frq = new XMLHttpRequest();
-                        frq.open("POST", "", true);
-                        frq.setRequestHeader('Content-Type', 'application/octet-stream');
-                        frq.setRequestHeader('x-filetype', f.type);
-                        frq.send(fr.result);
-                        //include a progress bar or something so the user doesn't feel like they're waiting several seconds without knowing if anything happened
-                        frq.onload = function() {
-                            if(frq.status == 200) {
-                                new_sound(frq.response, result);
+                        if(verify_audio_file(fr.result)) {
+                            var frq = new XMLHttpRequest();
+                            frq.open("POST", "", true);
+                            frq.setRequestHeader('Content-Type', 'application/octet-stream');
+                            frq.setRequestHeader('x-filetype', f.type);
+                            frq.send(fr.result);
+                            //include a progress bar or something so the user doesn't feel like they're waiting several seconds without knowing if anything happened
+                            frq.onload = function() {
+                                if(frq.status == 200) {
+                                    new_sound(frq.response, result);
+                                }
                             }
+                        }
+                        else {
+                            alert("Invalid file");
                         }
 					}
                 }
@@ -524,7 +529,7 @@ document.getElementById("cesiumContainer").ondrop = function(event) {
                         }
                     }
                     else {
-                        alert(str + "This is not a valid URL");
+                        alert(str + " is not a valid URL");
                     }
                 }
                 url_val_xhr.onerror = function(err) {
