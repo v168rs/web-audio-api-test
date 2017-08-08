@@ -11,6 +11,7 @@
 //Special system specifically for geotagged samples
 //Requires Cesium.js
 //National anthems (soundfile, lat, long, flagicon) maybe volume too (do something cool like volume proportional to GDP)
+//TODO: Undo/Redo
 
 //Stored in JSON
 var geo_audio_samples = [],
@@ -150,10 +151,10 @@ function find_prox_nodes(range = 2000000, lat, long, max_nodes = 7) {
                 //console.log("Playing audio " + geo_audio_samples[index][0]);
                 html5_audio.crossOrigin = "anonymous";
                 /*html5_audio.autoplay = true;*/
-                //TODO: how to defeat CORS 101
                 var audio_source = context.createMediaElementSource(html5_audio); //Creates an HTML5 audio element that points to a specific URL.
                 audio_source.mediaElement.loop = true; //Why not a regular WebAudioAPI AudioBufferSourceNode? Because for some reason those leak memory like crazy.
                 audio_source.mediaElement.play(); //It has something to do with array buffers.
+                audio_source.mediaElement.autoplay = true;
                 //Update billboard
                 geo_buses[index][0] = audio_source;
                 audio_source.connect(geo_buses[index][1]);
@@ -428,6 +429,17 @@ function verify_audio_file(array_buffer) { //this doesn't explicitly confirm the
     return ((gen_audio_str[0] == "fffb") || (gen_audio_str[1] == "494433") || (gen_audio_str[2] == "664c6143") || (gen_audio_str[2] == "4f676753") || (gen_audio_str[2] == "52494646") || (gen_audio_str[2] == "57415645")); //mp3 is such a special snowflake
 }
 
+function stoh(str, callback) {
+    var buffer = new TextEncoder("utf-8").encode(str);
+    return crypto.subtle.digest("SHA-256", buffer).then(function (hash) {
+        var ret_str = "";
+        var view = new DataView(hash);
+        for(var i = 0; i < view.byteLength; i += 4) {
+            ret_str += view.getUint32(i).toString(16);
+        }
+        callback(ret_str);
+    });
+}
 
 //Posts the current set to server (it could be an unaltered verison of one of the stock sets but preferably you wouldn't do that)
 function post_set() {
@@ -439,18 +451,23 @@ function post_set() {
         sample_set : geo_audio_samples,
         attributes : geo_audio_attributes ? geo_audio_attributes : ["snd/imp/impulse2.wav", 30, 150]
     };
-    check_xhr.open("POST", "", true); //the set name becomes a user name
-    check_xhr.setRequestHeader("Authorization", "Basic" + btoa(name + ":" + password));
-    check_xhr.send(JSON.stringify(json_request));
-    check_xhr.onload = function() {
-        if(check_xhr.status != 200) {
-            //Tell the user that the password isn't correct
-            geo_note.innerHTML = "Failed to post: " + check_xhr.response;
+    //hash password once clientside so we're not transmitting plaintext
+    
+    
+    stoh(password, function(passhash) {
+        check_xhr.open("POST", "", true); //the set name becomes a user name
+        check_xhr.setRequestHeader("Authorization", "Basic" + btoa(name + ":" + passhash));
+        check_xhr.send(JSON.stringify(json_request));
+        check_xhr.onload = function() {
+            if(check_xhr.status != 200) {
+                //Tell the user that the password isn't correct
+                geo_note.innerHTML = "Failed to post: " + check_xhr.response;
+            }
+            else {
+                geo_note.innerHTML = "Posted!";
+            }
         }
-        else {
-            geo_note.innerHTML = "Posted!";
-        }
-    }
+    });
 //Sound sets with no password may be freely edited by the public (and should probably be designated as such)
 //Change password?
 }
@@ -472,7 +489,6 @@ document.getElementById("post_btn").addEventListener("click", function() {
 });
 
 document.getElementById("cesiumContainer").ondrop = function(event) {
-    //TODO STOP DRAG AND DROP FROM DUPING
     var c2 = new Cesium.Cartesian2(event.clientX  - document.getElementById("cesiumContainer").offsetLeft, event.clientY  - document.getElementById("cesiumContainer").offsetTop),
         result = {}; //stores ellipsoid coordinates of mouse location
     viewer.camera.pickEllipsoid(c2, viewer.scene.globe.ellipsoid, result);

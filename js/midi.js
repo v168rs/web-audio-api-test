@@ -51,7 +51,7 @@ var MIDIm = (function () {
 	}
 //Polyphony?
 	//Turns an array of recurring states into abstract n-order markov chain objects.
-	function markov_parse(array, n, state, npow = null) {
+	function markov_parse(array, n, state) {
 	var ret_dict = [],
 		ret_obj = {};
 	//Abstract the states as numbers
@@ -72,7 +72,6 @@ var MIDIm = (function () {
 	});
 	ret_obj["~n_order"] = n;
 	ret_obj["~state"] = state;
-	ret_obj["~npow_order"] = npow; //Chained chains
 	return [ret_dict, ret_obj];
 	}
 	
@@ -166,13 +165,14 @@ var MIDIm = (function () {
 		},
 		
 		//generate a markov chain
-		mwalk: function(markov_arr, ssn = 0, max_rep = 2) {
+        //do parse directly in here?
+		mwalk: function(markov_arr, ssn = 0, max_rep = 2, parser) {
 			var walk = [],
 				markov_obj = markov_arr[1],
 				opn = Object.getOwnPropertyNames(markov_obj),//"Dictionary array" which we will use to re-translate our output walk into correct values
 				mad = markov_arr[0],
 				n = markov_obj["~n_order"];
-				opn = opn.filter(function(x) {if((x != "~n_order") && (x != "~state") && (x != "~npow_order")) return x;});			
+				opn = opn.filter(function(x) {if((x != "~n_order") && (x != "~state")) return x;});			
 			var	ss = pick(opn),
 				cs = ss,
 				i = 1;
@@ -184,26 +184,30 @@ var MIDIm = (function () {
 				ss = opn[ssn];
 			}
 			walk.push(...ss.split(",").map(function(o){return parseInt(o);}));
-			for(i = 1; i < max_rep; i++) {
-					if(markov_obj[cs]) {
+			for(i = 0; i < max_rep; i++) {
+				if(markov_obj[cs]) {
 					walk.push(pick(markov_obj[cs]));
 						//from end - n to end
 					cs = String(walk.slice(walk.length - n, walk.length));
-						//If we find npow do something where we go further down the tree until it's 0 and then walk?????
 				}
 				else {
-					console.log("Ran out of combinations; trying new state");
-					cs = pick(opn)
+                    if(n == 1) {
+                        console.log("Ran out of combinations; trying new state");
+					    cs = pick(opn)
+                    }
+                    else if (n > 1) {
+                        var temp_arr = parser(n-1);
+                        var temp_walk = this.mwalk(temp_arr, 0, 1, parser);
+                        temp_walk = temp_walk.map(function(item) {if(mad.indexOf(item) == -1) {mad.push(item);} return mad.indexOf(item);}); //Add new lower-order states to our dictionary so we can properly parse the walk
+                        walk.push(...temp_walk); //STOP
+                        cs = String(walk.slice(walk.length - n, walk.length));
+                    }
 				}
 			}
 			return walk.map(function(num) {return mad[num];});
 		},
 		//key detection? Generalize across keys?
 	};
-	
-	
-	
-	
 })();
 MIDIm.init();
 
@@ -212,8 +216,8 @@ var param1 = 0;
 //testing function
 function mwreg() {
 	var ret_arr = [],
-		not_arr = MIDIm.mwalk(MIDIm.mnprel(param1), 0, parseInt(document.getElementById("gen_rep").value)),
-		rht_arr = MIDIm.mwalk(MIDIm.mrprel(param1), 0, parseInt(document.getElementById("gen_rep").value));
+		not_arr = MIDIm.mwalk(MIDIm.mnprel(param1), 0, parseInt(document.getElementById("gen_rep").value), MIDIm.mnprel),
+		rht_arr = MIDIm.mwalk(MIDIm.mrprel(param1), 0, parseInt(document.getElementById("gen_rep").value), MIDIm.mrprel);
 	not_arr.forEach(function(note, index){
 		if(rht_arr[index]) {
 			ret_arr.push([note, rht_arr[index]/1000]);
@@ -224,7 +228,7 @@ function mwreg() {
 }
 
 function mwrn() {
-	var not_arr = MIDIm.mwalk(MIDIm.chdgrel(param1), 0, parseInt(document.getElementById("gen_rep").value));
+	var not_arr = MIDIm.mwalk(MIDIm.chdgrel(param1), 0, parseInt(document.getElementById("gen_rep").value), MIDIm.chdgrel);
 	console.log(not_arr);
 	return not_arr;
 }
@@ -236,14 +240,15 @@ function create_synth(){
     add_osc(bus_num, "triangle");
 	add_osc(bus_num, "sine");
 	add_convolution(bus_num, "snd/imp/impulse.wav");
-	add_ADHSR_env(bus_num, 0, 0.5, 0.03, 0, 0.5);
+	add_ADHSR_env(bus_num, 0, 0.2, 0.03, 0, 0.5);
 	add_filter(bus_num)
 	dry_wet(0, 1, 100);
 	
-    set_bus_gain(bus_num, 0.01);
+    set_bus_gain(bus_num, 0.03);
 }
 
 var chord_buffer = 20, //millisecond window in which any note played will be considered a chord
+    //why? Because I was not thinking when I made the original synth architecture and I can't change it now
 	chord_array_buffer = [],
 	last_played = performance.now();
 MIDIm.onmidinote = function(msg) {

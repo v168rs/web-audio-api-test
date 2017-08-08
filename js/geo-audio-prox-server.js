@@ -3,15 +3,20 @@ const fs = require('fs');
 const atob = require('atob');
 const jsonfile = require('jsonfile');
 const url = require('url');
+const crypto = require('crypto');
+const bcrypt = require('bcrypt');
+//wow
+
 const port = 80;
 const max_json = 1e7; //number of bytes allowed per json upload
 const max_audio = 1e8; //number of bytes allowed per audio file upload
+const rej_url = ["/json/pass.json", "/json/file_hashes.json", "/js/geo-audio-prox-server.js"];
 
 //We need some way of validating URLs and files and making sure they are all playable on the CLIENT AND SERVER to ensure:
 //a. Somebody can't upload random and possibly dangerous files to the server
 //b. Somebody doesn't try to put a non-sound/non-URL file into the map and then complain that it won't play
 
-//Restart server if it crashes
+//TODO: Restart server if it crashes
 
 //this doesn't explicitly confirm the type; just that it's html5 audio-compatible (returns true/false)
 function verify_audio_file(buffer) { 
@@ -24,6 +29,12 @@ function verify_audio_file(buffer) {
     });
     return ((gen_audio_str[0] == "fffb") || (gen_audio_str[1] == "494433") || (gen_audio_str[2] == "664c6143") || (gen_audio_str[2] == "4f676753") || (gen_audio_str[2] == "52494646") || (gen_audio_str[2] == "57415645")); //mp3 is a special snowflake (it gets two file headers that are different sizes, neither of which are the standard 4 bytes)
     //this only checks for magic numbers so you might want to do something a little more sophisticated later
+}
+
+function generate_hash(buffer) {
+    var hash = crypto.createHash('sha256');
+    hash.update(buffer);
+    return hash.digest('hex');
 }
 
 function validate_sample_URL_array(sample_arr, index = 0, final_callback) { //Is this too heavy?
@@ -78,7 +89,7 @@ const requestHandler = (request, response) => {
             response.end("Requested resource at " + request.url + "does not exist.");
             return;
         }} //this should catch any cases where we request a file that does not exist
-        else if (request.url == "../json/pass.json") { //Do not let the client access the actual password json
+        else if (rej_url.indexOf(request.url) != -1) { //Do not let the client access the actual password json
             response.writeHead(404);
             response.end();
             return;
@@ -110,7 +121,7 @@ const requestHandler = (request, response) => {
         if(request.headers["content-type"] == 'application/octet-stream') {
             var data_buf = [];
             request.on('data', function(chunk) {
-                if(data_buf.length > max_audio) {
+                if(Buffer.concat(data_buf).length > max_audio) {
                     response.writeHead(413);
                     response.end("Uploaded data too large");
                     request.connection.destroy();
@@ -119,37 +130,56 @@ const requestHandler = (request, response) => {
                 data_buf.push(chunk);
             });
             request.on('end', function() {
+                var rndstr = Math.floor(Math.random()*Date.now()); //lazy PRNG
                 data_buf = Buffer.concat(data_buf);
-                if(verify_audio_file(data_buf)) {
-                    var rndstr = Math.floor(Math.random()*Date.now()); //lazy PRNG
-                    switch (request.headers["x-filetype"]) {
-                        case "audio/mp3":
-                            fs.writeFile("../rec_snd/" + rndstr + ".mp3", data_buf, {flags: 'wx'});
-                            response.writeHead(200);
-                            response.end("rec_snd/" + rndstr + ".mp3");
-                            break;
-                        case "audio/wav":
-                            fs.writeFile("../rec_snd/" + rndstr + ".wav", data_buf, {flags: 'wx'});
-                            response.writeHead(200);
-                            response.end("rec_snd/" + rndstr + ".wav");
-                            break;
-                        case "audio/ogg":
-                            fs.writeFile("../rec_snd/" + rndstr + ".ogg", data_buf, {flags: 'wx'});
-                            response.writeHead(200);
-                            response.end("rec_snd/" + rndstr + ".ogg");
-                            break;
-                        case "audio/flac":
-                            fs.writeFile("../rec_snd/" + rndstr + ".flac", data_buf, {flags: 'wx'});
-                            response.writeHead(200);
-                            response.end("rec_snd/" + rndstr + ".flac");
-                            break;
-                        default:
-                            response.writeHead(400);
-                            response.end();
-                            break;
-                           }
-                }
-                return;
+                jsonfile.readFile("../json/file_hashes.json", function(err, f_hash_obj) {
+                    var fhsh = generate_hash(data_buf);
+                    if(f_hash_obj[fhsh]) {
+                        response.writeHead(200);
+                        console.log("Duplicate file");
+                        response.end(f_hash_obj[fhsh]);
+                        return;
+                    }
+                    else {
+                        if(verify_audio_file(data_buf)) {
+                        switch (request.headers["x-filetype"]) {
+                            case "audio/mp3":
+                                fs.writeFile("../rec_snd/" + rndstr + ".mp3", data_buf, {flags: 'wx'});
+                                response.writeHead(200);
+                                response.end("rec_snd/" + rndstr + ".mp3");
+                                f_hash_obj[fhsh] = "rec_snd/" + rndstr + ".mp3";
+                                jsonfile.writeFile("../json/file_hashes.json", f_hash_obj);
+                                break;
+                            case "audio/wav":
+                                fs.writeFile("../rec_snd/" + rndstr + ".wav", data_buf, {flags: 'wx'});
+                                response.writeHead(200);
+                                response.end("rec_snd/" + rndstr + ".wav");
+                                f_hash_obj[fhsh] = "rec_snd/" + rndstr + ".wav";
+                                jsonfile.writeFile("../json/file_hashes.json", f_hash_obj);
+                                break;
+                            case "audio/ogg":
+                                fs.writeFile("../rec_snd/" + rndstr + ".ogg", data_buf, {flags: 'wx'});
+                                response.writeHead(200);
+                                response.end("rec_snd/" + rndstr + ".ogg");
+                                f_hash_obj[fhsh] = "rec_snd/" + rndstr + ".ogg";
+                                jsonfile.writeFile("../json/file_hashes.json", f_hash_obj);
+                                break;
+                            case "audio/flac":
+                                fs.writeFile("../rec_snd/" + rndstr + ".flac", data_buf, {flags: 'wx'});
+                                response.writeHead(200);
+                                response.end("rec_snd/" + rndstr + ".flac");
+                                f_hash_obj[fhsh] = "rec_snd/" + rndstr + ".flac";
+                                jsonfile.writeFile("../json/file_hashes.json", f_hash_obj);
+                                break;
+                            default:
+                                response.writeHead(400);
+                                response.end();
+                                break;
+                               }
+                    }
+                    return;
+                    }
+                });
             });
         }
         else {
@@ -219,24 +249,29 @@ const requestHandler = (request, response) => {
                                                 response.end();
                                                 return;
                                             }
-                                            if((file_obj[set_name] == password) || (file_obj[set_name] == "")) { //hash browns
-                                                //Overwrite JSON file for samples
-                                                jsonfile.writeFile("../json/geo_audio_samples_" + set_name + ".json", json_obj.sample_set);
-                                                //Attributes
-                                                jsonfile.writeFile("../json/geo_audio_attributes_" + set_name + ".json", json_obj.attributes);
-                                                console.log("Updating set " + set_name);
-                                                response.writeHead(200);
-                                                response.write("OK");
-                                                response.end();
-                                                return;
-                                            }
-                                            else {
-                                                console.log("Invalid password.");
-                                                response.writeHead(401);
-                                                response.write("Incorrect password.");
-                                                response.end();
-                                                return;
-                                            }
+                                            //encrypt mister server sid!
+                                            bcrypt.compare(password, file_obj[set_name], function(err, res) {
+                                                if ((res == true) || (file_obj[set_name] == "")) {
+                                                    //Overwrite JSON file for samples
+                                                    jsonfile.writeFile("../json/geo_audio_samples_" + set_name + ".json", json_obj.sample_set);
+                                                    //Attributes
+                                                    jsonfile.writeFile("../json/geo_audio_attributes_" + set_name + ".json", json_obj.attributes);
+                                                    console.log("Updating set " + set_name);
+                                                    response.writeHead(200);
+                                                    response.write("OK");
+                                                    response.end();
+                                                    return;
+                                                }
+                                                else {
+                                                    console.log("Attempted password: " + password);
+                                                    console.log("Correct password: " + file_obj[set_name]);
+                                                    console.log("Invalid password.");
+                                                    response.writeHead(401);
+                                                    response.write("Incorrect password.");
+                                                    response.end();
+                                                    return;
+                                                }    
+                                            });
                                         });
                                         } 
                                     else {
@@ -244,8 +279,11 @@ const requestHandler = (request, response) => {
                                         console.log("Posting set " + set_name);
                                         //Input password and name into database
                                         jsonfile.readFile("../json/pass.json", function(err, file_obj) {
-                                            file_obj[set_name] = password; //if security ever becomes more important maybe you should salt the hashes
-                                            jsonfile.writeFile("../json/pass.json", file_obj);
+                                            
+                                            if(password == "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855") {file_obj[set_name] = "";} //sha256 empty string
+                                            else {
+                                                bcrypt.hash(password, 10, function(err, hash) {file_obj[set_name] = hash; jsonfile.writeFile("../json/pass.json", file_obj);});
+                                            }
                                         });
                                         jsonfile.readFile("../json/meta.json", function(err, file_obj) {
                                             file_obj.push(set_name)
