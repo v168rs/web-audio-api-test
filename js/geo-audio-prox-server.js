@@ -251,7 +251,7 @@ const requestHandler = (request, response) => {
                                             }
                                             //encrypt mister server sid!
                                             bcrypt.compare(password, file_obj[set_name], function(err, res) {
-                                                if ((res == true) || (file_obj[set_name] == "")) {
+                                                if ((res == true) || (file_obj[set_name] === undefined)) {
                                                     //Overwrite JSON file for samples
                                                     jsonfile.writeFile("../json/geo_audio_samples_" + set_name + ".json", json_obj.sample_set);
                                                     //Attributes
@@ -263,9 +263,6 @@ const requestHandler = (request, response) => {
                                                     return;
                                                 }
                                                 else {
-                                                    console.log("Attempted password: " + password);
-                                                    console.log("Correct password: " + file_obj[set_name]);
-                                                    console.log("Invalid password.");
                                                     response.writeHead(401);
                                                     response.write("Incorrect password.");
                                                     response.end();
@@ -293,7 +290,7 @@ const requestHandler = (request, response) => {
                                         jsonfile.writeFile("../json/geo_audio_samples_" + set_name + ".json", json_obj.sample_set, {flag: "wx"});
                                         //Attributes
                                         jsonfile.writeFile("../json/geo_audio_attributes_" + set_name + ".json", json_obj.attributes, {flag: "wx"});
-                                        response.writeHead(201);
+                                        response.writeHead(200);
                                         response.end();
                                         return;
                                     }

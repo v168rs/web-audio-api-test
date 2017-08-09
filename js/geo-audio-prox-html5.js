@@ -6,12 +6,12 @@
 //Ogg files are kept at https://drive.google.com/open?id=0B6_a4sq0zv4FVnFWc1dFMlhOTWM
 //Flags are kept at https://drive.google.com/open?id=0B6_a4sq0zv4FT0N2TUNwb3ZqNnc
 //Kosovo and South Sudan are special because they have no flag here
+
 /*(function () {*/
 "use strict";
 //Special system specifically for geotagged samples
 //Requires Cesium.js
 //National anthems (soundfile, lat, long, flagicon) maybe volume too (do something cool like volume proportional to GDP)
-//TODO: Undo/Redo
 
 //Stored in JSON
 var geo_audio_samples = [],
@@ -129,7 +129,9 @@ function find_prox_nodes(range = 2000000, lat, long, max_nodes = 7) {
     rej_arr.forEach(function(index) { //Pause and delete nodes out of range.
         var samp = geo_buses[index][0];
         samp.disconnect();
-        if(!samp.mediaElement.paused && !samp.mediaElement.ended && samp.mediaElement.currentTime > 0 && samp.readyState > 2) {samp.mediaElement.pause();} //actually necessary
+        if(!samp.mediaElement.paused && !samp.mediaElement.ended && samp.mediaElement.currentTime > 0 && samp.readyState > 2) { //All these checks are necessary. Without them nothing will pause.
+            samp.mediaElement.pause(); samp.mediaElement = null;} //MDN is lying. There is no method of mediaElement called stop(). Hopefully pause() allows them to be garbage collected.
+        //removeChild()
         geo_buses[index][0] = null;
         listening_nodes -= 1;
         viewer.entities.getById(String(index)).billboard.scale = 1;
@@ -147,22 +149,34 @@ function find_prox_nodes(range = 2000000, lat, long, max_nodes = 7) {
         ind_arr.forEach(function(index){
             //console.log("Doing check");
             if((geo_buses[index][0] === undefined) || (geo_buses[index][0] === null)) { //If there isn't already a sound there
-                var html5_audio = new Audio(geo_audio_samples[index][0]);
+                //Why HTML5 Audio and not a regular WebAudioAPI AudioBufferSourceNode?
+                //After a week of memory leak searching and online research I have discovered that the AudioBufferSourceNode doesn't free its buffer from memory (in Chrome)
+                //Even though you may "only" be loading tens of megabytes of mp3 files, in reality once they're decoded it's more like a gigabyte
+                //So you could easily end up using 3 gigs of RAM or so every few seconds if you move around a bit
+                //HTML5 Audio doesn't have that problem firstly because it doesn't leak memory as much and secondly because it streams the data
+                //There is still one problem with this system:
+                //CORS restrictions exist
+                //Therefore we can't process audio data from any server that shouldn't let us (which I suppose is a good thing)
+                
+                var html5_audio = new Audio(); //ha ha
                 //console.log("Playing audio " + geo_audio_samples[index][0]);
                 html5_audio.crossOrigin = "anonymous";
-                /*html5_audio.autoplay = true;*/
+                html5_audio.src = geo_audio_samples[index][0];
+                html5_audio.autoplay = true;
+                html5_audio.loop = true;
                 var audio_source = context.createMediaElementSource(html5_audio); //Creates an HTML5 audio element that points to a specific URL.
-                audio_source.mediaElement.loop = true; //Why not a regular WebAudioAPI AudioBufferSourceNode? Because for some reason those leak memory like crazy.
-                audio_source.mediaElement.play(); //It has something to do with array buffers.
-                audio_source.mediaElement.autoplay = true;
+                
+                /*audio_source.mediaElement.play();*/ 
+                
                 //Update billboard
                 geo_buses[index][0] = audio_source;
                 audio_source.connect(geo_buses[index][1]);
                 viewer.entities.getById(String(index)).billboard.scale = 1.5;
             }
         });
-        //99999 is a null value. lat/lon is lat. but can also be expressed by polar to equirectangular:
+        
     }
+    //99999 is a null value. lat/lon can also be expressed by polar to equirectangular:
 	/*
 	var y = Math.round((90 - rad2deg(lat)) * 10)  - data_canvas_context.canvas.offsetLeft; //1800
 	var x = Math.round((rad2deg(long) + 180) * 10)  - data_canvas_context.canvas.offsetTop;
@@ -175,7 +189,7 @@ function find_prox_nodes(range = 2000000, lat, long, max_nodes = 7) {
 //Visual representation of which sound is playing or not
 
 //Doesn't set any sample loc.
-//A function used for calculating the position and orientation of panners. Returns array of 6 numbers with cartesian position and surface normal - I don't know how the math works
+//A function used for calculating the position and orientation of panners. Returns array of 6 numbers with cartesian position and surface normal - I don't know how the math works; I just found it on Wikipedia
 function set_samples_loc(arr = null, lat = 0, long = 0){
     var loc_lat = lat, //y
         loc_long = long, //x
@@ -199,13 +213,13 @@ function set_samples_loc(arr = null, lat = 0, long = 0){
     return ret;
 }
 
-//Unified function for setting position and orientation of the AudioContext's listener
+//Function for setting position and orientation of the AudioContext's listener
 function set_listener_loc(x, y, z, fx, fy, fz, ux, uy, uz) {
     context.listener.setPosition(x, y, z);
     context.listener.setOrientation(fx, fy, fz, ux, uy, uz);
 }
 
-//Cesium stuff
+//Cesium stuff, listener for updating location, playing/disabling sounds etc.
 var viewer = new Cesium.Viewer('cesiumContainer', {"sceneModePicker" : false, "timeline" : false}); //Scenemodepicker makes the camera position weird in some modes so we got rid of it
 var camera = viewer.camera;
 camera.changed.addEventListener(function() { if(ready) {
@@ -291,11 +305,11 @@ function change_imagery_layer(iurl = "img/data/lstd_01_c.PNG") {
 }
 */
 
-var sample_xhr = new XMLHttpRequest();
-var attribute_xhr = new XMLHttpRequest();
 			  
 //Function to switch which set of samples you're using
 function change_sample_bank(audio_selector = "National_Anthems") {
+    var sample_xhr = new XMLHttpRequest();
+    var attribute_xhr = new XMLHttpRequest();
     ready = false; //I'M BUSY
     cur_audio_selector = audio_selector;
     document.getElementById("set_name").value = audio_selector;
@@ -386,38 +400,99 @@ function update_geo() {
     find_prox_nodes(1000000, camera.positionCartographic["latitude"], camera.positionCartographic["longitude"]);
 }
 
-//takes a URL and Cesium cartesian object as input
+//get ID of entity from sound URL. Returns -1 if then entity is not found.
+function gs_id_of(url) {
+    return geo_audio_samples.findIndex((sb)=>{return sb[0] == url;});
+}
+
+//takes a URL and Cesium cartesian object as input to create new sound (autoloaded)
 function new_sound(src, loc) {
     var latlon = Cesium.Ellipsoid.WGS84.cartesianToCartographic(loc);
     geo_audio_samples.push([src, rad2deg(latlon.latitude), rad2deg(latlon.longitude)]);
     update_geo();
+    return geo_audio_samples.length - 1;
 }
 
-//deletes sound of selected entity
-function del_sound() {
-    if(!viewer.selectedEntity) {
-        return;
-    }
-    console.log(viewer.selectedEntity);
-    var id = viewer.selectedEntity._id;
-    console.log("deleting " + id);
-    geo_audio_samples.splice(id, 1);
+//takes URL, latitude, longitude, and picture source to create new sound with image (mostly for undos/redos)
+function new_sound_latlon(src, lat, lon, pic) {
+    geo_audio_samples.push([src, lat, lon, pic]);
     update_geo();
+    return;
 }
 
-//delete_sound
+//delete sound by index
+function del_sound(id) {
+    console.log("Deleting sound by index:" + id);
+    var arr = geo_audio_samples.splice(id, 1);
+    update_geo();
+    return arr[0];
+}
+
+var commands = []; //wwew ram
+var curr_index = 0; 
+const max_do_l = 32; //last n commands are accessible
+
+//helper functions for updating command array—all command executions require this
+function commands_fresh(com) {
+    commands[(curr_index < max_do_l) ? curr_index++ : max_do_l] = com; //set value at curr_index then increment curr_index unless we're at the maximum
+    commands = commands.slice(-max_do_l); //last n commands are accessible
+    commands = commands.slice(0, curr_index+1); //start a new chain if you're in the middle of a command chain (by undoing) and perform a new action
+}
+
+//commands_fresh(com) but for redoing—all command redos require this
+function commands_redo(com) {
+    console.log("Redoing");
+    commands[(curr_index < max_do_l) ? curr_index++ : max_do_l] = com; 
+    commands = commands.slice(-max_do_l);
+}
+
+//returns a command object for creating new sounds. call NewSound().execute(), NewSound().redo(), etc.
+var NewSound = function(){return { 
+    execute : function(src, loc) {this.value = new_sound(src, loc); commands_fresh(this); this._src = src; this._loc = loc;},
+    redo : function() {this.value = new_sound(this._src, this._loc); commands_redo(this);},
+    undo : function() {del_sound(this.value);},
+    value : 0, //properties used for caching important values for redo and undo
+    _src: null,
+    _loc: null
+};}
+
+//returns a command object for deleting sounds by id
+var DeleteSound = function(){return {
+    execute : function(id) {this.value = del_sound(id); commands_fresh(this);},
+    redo : function() {this.value = del_sound(gs_id_of(this.value[0])); commands_redo(this);},
+    undo : function() {if(this.value){new_sound_latlon(this.value[0], this.value[1], this.value[2], this.value[3]);}},
+    value : null
+};}
+
+//call to undo the previous action
+function c_undo() {
+    var c = commands[(curr_index > 0) ? --curr_index : null];
+    if(c) {c.undo(); console.log("Undoing");}
+    else {console.log("Nothing to undo!");}
+}
+
+//call to redo an undone action
+function c_redo() {
+    if(commands[curr_index]){
+        commands[curr_index].redo();
+    }
+    else {console.log("Nothing to redo!");}
+}
+
+//delete_sound_set
 //move_sound
-//copy, paste, undo?
+//copy, cut, paste
 
 //Function to create new sound set
 function new_sound_set() {
     geo_audio_samples = [];
-    geo_audio_attributes = ["snd/imp/impulse2.wav", 30, 150];
+    geo_audio_attributes = ["snd/imp/impulse3.wav", 30, 150];
     change_sample_bank("custom");
     //probably more complicated than this but we'll figure it out later
 }
 
-function verify_audio_file(array_buffer) { //this doesn't explicitly confirm the type; just that it's html5 audio-compatible
+//Pass in an array buffer: Returns T/F. Just checks magic numbers.
+function verify_audio_file(array_buffer) { 
     var uint_arr = new Uint8Array(array_buffer),
         gen_audio_view = [uint_arr.subarray(0, 2), uint_arr.subarray(0, 3), uint_arr.subarray(0, 4)],
         gen_audio_str = ["", "", ""];
@@ -429,6 +504,7 @@ function verify_audio_file(array_buffer) { //this doesn't explicitly confirm the
     return ((gen_audio_str[0] == "fffb") || (gen_audio_str[1] == "494433") || (gen_audio_str[2] == "664c6143") || (gen_audio_str[2] == "4f676753") || (gen_audio_str[2] == "52494646") || (gen_audio_str[2] == "57415645")); //mp3 is such a special snowflake
 }
 
+//Takes string and callback which receives a string hex SHA-256 digest of original string
 function stoh(str, callback) {
     var buffer = new TextEncoder("utf-8").encode(str);
     return crypto.subtle.digest("SHA-256", buffer).then(function (hash) {
@@ -449,7 +525,7 @@ function post_set() {
     var check_xhr = new XMLHttpRequest(),
     json_request = {
         sample_set : geo_audio_samples,
-        attributes : geo_audio_attributes ? geo_audio_attributes : ["snd/imp/impulse2.wav", 30, 150]
+        attributes : geo_audio_attributes ? geo_audio_attributes : ["snd/imp/impulse3.wav", 30, 150]
     };
     //hash password once clientside so we're not transmitting plaintext
     
@@ -514,7 +590,7 @@ document.getElementById("cesiumContainer").ondrop = function(event) {
                             //include a progress bar or something so the user doesn't feel like they're waiting several seconds without knowing if anything happened
                             frq.onload = function() {
                                 if(frq.status == 200) {
-                                    new_sound(frq.response, result);
+                                    NewSound().execute(frq.response, result);
                                 }
                             }
                         }
@@ -535,10 +611,10 @@ document.getElementById("cesiumContainer").ondrop = function(event) {
                     if(url_val_xhr.status == 200) {
                         //Verify audio type
                         //http://api.soundcloud.com/tracks/204082098/stream?client_id=17a992358db64d99e492326797fff3e8
-                        //https://api.soundcloud.com/tracks/42328219/stream?client_id=b1495e39071bd7081a74093816f77ddb
-                        //http://audionautix.com/Music/JoyToTheWorld.mp3
+-                       //https://api.soundcloud.com/tracks/42328219/stream?client_id=b1495e39071bd7081a74093816f77ddb
+                        //k e k
                         if(verify_audio_file(url_val_xhr.response)) {
-                            new_sound(str, result);
+                            NewSound().execute(str, result);
                         }
                         else {
                             alert("This is not a valid sound (supported formats are mp3, flac, ogg, and wav)");
@@ -549,8 +625,8 @@ document.getElementById("cesiumContainer").ondrop = function(event) {
                     }
                 }
                 url_val_xhr.onerror = function(err) {
-                    if(confirm("This URL may not allow cross-origin requests. The uploaded file will not be validated and may not function properly. Proceed?")) {
-                        new_sound(str, result);
+                    if(confirm("This URL does not allow cross-origin requests. The uploaded file cannot be validated and mayf not function properly. Proceed?")) {
+                        NewSound().execute(str, result);
                     }
                     //Majority of URLs won't allow you to read data so it might not even be worth including this feature.
                 }
@@ -562,8 +638,14 @@ document.getElementById("cesiumContainer").ondrop = function(event) {
 }
 
 document.getElementById("body").onkeydown = function(event) {
-    if(event.key && event.key == "Delete") {
-        del_sound();
+    if(event.key && event.key == "Delete" && viewer.selectedEntity) {
+        DeleteSound().execute(viewer.selectedEntity._id);
+    }
+    if(event.key && event.key == "z" && event.ctrlKey == true) {
+        c_undo();
+    }
+    if(event.key && event.key == "y" && event.ctrlKey == true) {
+        c_redo();
     }
 }
 

@@ -236,11 +236,12 @@ function mwrn() {
 function create_synth(){
     var bus_num = create_new_bus(context.destination);
 	add_osc(bus_num, "sawtooth");
-	add_osc(bus_num, "sine");
+	add_osc(bus_num, "square");
     add_osc(bus_num, "triangle");
+    
 	add_osc(bus_num, "sine");
 	add_convolution(bus_num, "snd/imp/impulse.wav");
-	add_ADHSR_env(bus_num, 0, 0.2, 0.03, 0, 0.5);
+	add_ADHSR_env(bus_num, 0.2, 0.2, 0.05, 1, 0.5);
 	add_filter(bus_num)
 	dry_wet(0, 1, 100);
 	
