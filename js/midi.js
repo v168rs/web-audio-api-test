@@ -69,7 +69,8 @@ var MIDIm = (function () {
 			 ret_dict.push(state);
             }
         }
-        else if(ret_dict.indexOf(state) != -1) {
+        else if(ret_dict.indexOf(state) == -1) {
+            console.log(state);
             ret_dict.push(state);
         }
 	});
