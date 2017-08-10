@@ -1,3 +1,10 @@
+function array_equals(arr1, arr2) {
+    var rt = true;
+    arr1.forEach((el, index) => {if(el != arr2[index]) {rt = false;}});
+    arr2.forEach((el, index) => {if(el != arr1[index]) {rt = false;}});
+    return rt;
+}
+
 var MIDIm = (function () {
 	//private
 	var midi,
@@ -8,11 +15,11 @@ var MIDIm = (function () {
     return (val - min1) / (max1 - min1) * (max2 - min2) + min2;
 } //from p5js
 	
-	function parse_buffer(option) {
+	function parse_buffer(option, buffer = midi_buffer) {
 		var p_arr = [],
 			listening_buffer = [];
 		if(option == "note") {
-			midi_buffer.forEach(function(a) {
+			buffer.forEach(function(a) {
 				if(a[0][0] == 144) {
 					p_arr.push(a[0][1]);
 				}
@@ -20,7 +27,7 @@ var MIDIm = (function () {
 		}
 		//time between notes
 		if(option == "rhythm") {
-			midi_buffer.forEach(function(a) {
+			buffer.forEach(function(a) {
 				if(a[0][0] == 144) {
 					listening_buffer.push(a[1]);
 				}
@@ -33,7 +40,7 @@ var MIDIm = (function () {
 		}
 		//time the note is held
 		if(option == "hold") {
-			midi_buffer.forEach(function(a) {
+			buffer.forEach(function(a) {
 				if(a[0][0] == 144) {
 					listening_buffer.push(a);
 				}
@@ -51,27 +58,37 @@ var MIDIm = (function () {
 	}
 //Polyphony?
 	//Turns an array of recurring states into abstract n-order markov chain objects.
-	function markov_parse(array, n, state) {
+	function markov_parse(array, n, sta) {
 	var ret_dict = [],
 		ret_obj = {};
-	//Abstract the states as numbers
+	//Abstract singular states as numbers
 	array.forEach(function(state){
-		if(!(ret_dict.indexOf(state) + 1)) { //If the state can't already be found in the "dictionary array", push it. 
-			//They should've just made indexOf return false if it can't find the index. That's what === is for!
-			ret_dict.push(state);
-		}
+        if(sta == "rn") {
+            if(ret_dict.findIndex((el)=>{return ((el[1] == state[1]) && (array_equals(el[0], state[0])));}) == -1) { //If the state can't already be found in the "dictionary array", push it. 
+        //TIL there's no function built into Javascript for comparing two arrays.
+			 ret_dict.push(state);
+            }
+        }
+        else if(ret_dict.indexOf(state) != -1) {
+            ret_dict.push(state);
+        }
 	});
 	array.forEach(function(state, index) {
 		if(array[index + n]) {
-			var a = array.slice(index, index+n).map(function(obj) {return ret_dict.indexOf(obj);}); //Abstract to numbers
+            
+            //basically we're just mapping multiple states (index to index + n) to indices in the ret_dict however because Javascript doesn't want us to compare arrays with == we have to do it the hard way
+            //meaning element by element
+			var a = array.slice(index, index+n).map(function(obj) {return (sta == "rn") ? ret_dict.findIndex((el)=>{return ((el[1] == obj[1]) && (array_equals(el[0], obj[0])));}) : (ret_dict.indexOf(obj));}); //Abstract to numbers
+            //what a neat expression \s
+            //is it worth putting everything on a single line if you no longer understand it? no but who cares really
 			if(!ret_obj[a]) {
 				ret_obj[a] = [];
 			}
-				ret_obj[a].push(ret_dict.indexOf(array[index + n]));
+				ret_obj[a].push((sta == "rn") ? ret_dict.findIndex((el)=>{return ((el[1] == array[index + n][1]) && (array_equals(el[0], array[index + n][0])));}) : ret_dict.indexOf(array[index + n]));
 		}
 	});
 	ret_obj["~n_order"] = n;
-	ret_obj["~state"] = state;
+	ret_obj["~state"] = sta;
 	return [ret_dict, ret_obj];
 	}
 	
@@ -196,6 +213,7 @@ var MIDIm = (function () {
 					    cs = pick(opn)
                     }
                     else if (n > 1) {
+                        console.log("lower order");
                         var temp_arr = parser(n-1);
                         var temp_walk = this.mwalk(temp_arr, 0, 1, parser);
                         temp_walk = temp_walk.map(function(item) {if(mad.indexOf(item) == -1) {mad.push(item);} return mad.indexOf(item);}); //Add new lower-order states to our dictionary so we can properly parse the walk
@@ -269,6 +287,7 @@ MIDIm.onmidinote = function(msg) {
 waa_init();
 create_synth();
 start_bus(0);
+//intervals
 
 //Document stuff
 

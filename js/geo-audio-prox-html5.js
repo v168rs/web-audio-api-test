@@ -610,9 +610,6 @@ document.getElementById("cesiumContainer").ondrop = function(event) {
                 url_val_xhr.onload = function() {
                     if(url_val_xhr.status == 200) {
                         //Verify audio type
-                        //http://api.soundcloud.com/tracks/204082098/stream?client_id=17a992358db64d99e492326797fff3e8
--                       //https://api.soundcloud.com/tracks/42328219/stream?client_id=b1495e39071bd7081a74093816f77ddb
-                        //k e k
                         if(verify_audio_file(url_val_xhr.response)) {
                             NewSound().execute(str, result);
                         }
