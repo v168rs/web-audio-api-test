@@ -418,6 +418,7 @@ function playProgression(bus_num, sequence) {
             total_length += chord_arr[1];
         });
     console.log("Playing a progression " + total_length + "seconds long.")
+    return total_length;
 }
 
 //takes a chord array and tries to play it on all available oscs on a bus (obviously you won't get any polyphony if you're only using one synth)

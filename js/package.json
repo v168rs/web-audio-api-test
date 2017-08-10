@@ -1,0 +1,16 @@
+{
+  "name": "geo-audio-package",
+  "version": "1.0.0",
+  "description": "For geo-audio project",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "FXPal",
+  "license": "ISC",
+  "dependencies": {
+    "atob": "^2.0.3",
+    "bcrypt": "^1.0.2",
+    "jsonfile": "^3.0.1"
+  }
+}

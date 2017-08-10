@@ -7,6 +7,8 @@ const crypto = require('crypto');
 const bcrypt = require('bcrypt');
 //wow
 
+//babby's first server
+
 const port = 80;
 const max_json = 1e7; //number of bytes allowed per json upload
 const max_audio = 1e8; //number of bytes allowed per audio file upload
@@ -214,7 +216,6 @@ const requestHandler = (request, response) => {
                         return;
                     }
                     //Validate URLs
-                    //RACE CONDITIONS HERE WE GO!
                     validate_sample_URL_array(json_obj.sample_set, 0, function(state) {
                         if(!state) {
                             console.log("Invalid URLs detected");
