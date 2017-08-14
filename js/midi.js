@@ -70,7 +70,6 @@ var MIDIm = (function () {
             }
         }
         else if(ret_dict.indexOf(state) == -1) {
-            console.log(state);
             ret_dict.push(state);
         }
 	});
@@ -191,6 +190,7 @@ var MIDIm = (function () {
 		//generate a markov chain
         //do parse directly in here?
 		mwalk: function(markov_arr, ssn = 0, max_rep = 2, parser) {
+            console.log(markov_arr);
 			var walk = [],
 				markov_obj = markov_arr[1],
 				opn = Object.getOwnPropertyNames(markov_obj),//"Dictionary array" which we will use to re-translate our output walk into correct values
@@ -368,6 +368,7 @@ document.getElementById("genc").onclick = function() {
 document.getElementById("genp").onclick = function() {
     if(interv) {
         clearInterval(interv);
+        interv = null;
     }
     else {
         alert("Not playing");
