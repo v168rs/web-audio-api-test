@@ -1,8 +1,12 @@
-//http://www.music.army.mil/music/nationalanthem/
+
 //US Navy Band
-//https://web-beta.archive.org/web/20030827154715/http://www.navyband.navy.mil:80/anthems/all_countries.htm
+//http://www.music.army.mil/music/nationalanthem/
+//http://www.navyband.navy.mil/anthems.html
 //MP3s are kept at https://drive.google.com/open?id=0B6_a4sq0zv4FRnFhajFJNkdRREU
 //Freesound.org
+//Attributions
+//New York: http://freesound.org/people/davidmenke/sounds/319752/
+//
 //Ogg files are kept at https://drive.google.com/open?id=0B6_a4sq0zv4FVnFWc1dFMlhOTWM
 //Flags are kept at https://drive.google.com/open?id=0B6_a4sq0zv4FT0N2TUNwb3ZqNnc
 //Kosovo and South Sudan are special because they have no flag here
@@ -144,11 +148,12 @@ function find_prox_nodes(range = 2000000, lat, long, max_nodes = 7) {
     });
     //Then slice to fit
     ind_arr = ind_arr.slice(0, max_nodes);
-    //console.log(ind_arr);
     if(ind_arr[0] !== undefined) {
         ind_arr.forEach(function(index){
             //console.log("Doing check");
-            if((geo_buses[index][0] === undefined) || (geo_buses[index][0] === null)) { //If there isn't already a sound there
+            if((geo_buses[index][0] === undefined) || (geo_buses[index][0] === null)) { 
+                
+                //If there isn't already a sound there
                 //Why HTML5 Audio and not a regular WebAudioAPI AudioBufferSourceNode?
                 //After a week of memory leak searching and online research I have discovered that the AudioBufferSourceNode doesn't free its buffer from memory (in Chrome)
                 //Even though you may "only" be loading tens of megabytes of mp3 files, in reality once they're decoded it's more like a gigabyte
@@ -159,14 +164,13 @@ function find_prox_nodes(range = 2000000, lat, long, max_nodes = 7) {
                 //Therefore we can't process audio data from any server that shouldn't let us (which I suppose is a good thing)
                 
                 var html5_audio = new Audio(); //ha ha
-                //console.log("Playing audio " + geo_audio_samples[index][0]);
                 html5_audio.crossOrigin = "anonymous";
                 html5_audio.src = geo_audio_samples[index][0];
                 html5_audio.autoplay = true;
                 html5_audio.loop = true;
                 var audio_source = context.createMediaElementSource(html5_audio); //Creates an HTML5 audio element that points to a specific URL.
-                
-                /*audio_source.mediaElement.play();*/ 
+                //THE PROMISE IS NEITHER RESOLVING NOR ERROR ARRRGHH GOOGLE STOP
+                audio_source.mediaElement.onload = ()=>{audio_source.mediaElement.play().then(()=>{console.log("Playing " + geo_audio_samples[index][0])}).catch((err)=>{console.err(error)});}
                 
                 //Update billboard
                 geo_buses[index][0] = audio_source;

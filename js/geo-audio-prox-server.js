@@ -10,8 +10,8 @@ const bcrypt = require('bcrypt');
 //babby's first server
 
 const port = 80;
-const max_json = 1e7; //number of bytes allowed per json upload
-const max_audio = 1e8; //number of bytes allowed per audio file upload
+const max_json = 1e6; //number of bytes allowed per json upload - 1 MB - who's uploading 3000+ sounds anyways?
+const max_audio = 1e7; //number of bytes allowed per audio file upload - 10 MB - people shouldn't bother uploading raw wavs realistically
 const rej_url = ["/json/pass.json", "/json/file_hashes.json", "/js/geo-audio-prox-server.js"];
 
 //We need some way of validating URLs and files and making sure they are all playable on the CLIENT AND SERVER to ensure:
