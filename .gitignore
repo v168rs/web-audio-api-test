@@ -1,5 +1,3 @@
 
-*.mp3
-*.ogg
 server/debug.log
 server/node_modules
