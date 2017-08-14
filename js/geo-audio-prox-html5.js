@@ -163,7 +163,7 @@ function find_prox_nodes(range = 2000000, lat, long, max_nodes = 7) {
                 //CORS restrictions exist
                 //Therefore we can't process audio data from any server that shouldn't let us (which I suppose is a good thing)
                 
-                var html5_audio = new Audio(); //ha ha
+                var html5_audio = new Audio();
                 html5_audio.crossOrigin = "anonymous";
                 html5_audio.src = geo_audio_samples[index][0];
                 html5_audio.autoplay = true;
@@ -270,11 +270,12 @@ function create_samples_with_loc(cone_inner = 30, cone_outer = 150){
         var geo_bus = [];
         var panner = context.createPanner();
         panner.panningModel = "HRTF"; //More realistic and supports 3D panning but computationally costly. Cheaper option is "equalpower" which is just L/R.
+        panner.distanceModel = "inverse";
         
 		//Positioning
         var geo6 = set_samples_loc(arr);
         panner.setPosition(geo6[0], geo6[1], geo6[2]);
-        panner.refDistance = 700; //Base distance unit for panner calculations
+        panner.refDistance = 7e4; //Base distance unit for panner calculations
         
         //Orientation
         panner.setOrientation(geo6[3], geo6[4], geo6[5]);
@@ -535,7 +536,7 @@ function post_set() {
     
     
     stoh(password, function(passhash) {
-        check_xhr.open("POST", "", true); //the set name becomes a user name
+        check_xhr.open("POST", window.location.origin + "/webaudio/update", true); //the set name becomes a user name
         check_xhr.setRequestHeader("Authorization", "Basic" + btoa(name + ":" + passhash));
         check_xhr.send(JSON.stringify(json_request));
         check_xhr.onload = function() {
@@ -587,7 +588,7 @@ document.getElementById("cesiumContainer").ondrop = function(event) {
 					fr.onload = function() {
                         if(verify_audio_file(fr.result)) {
                             var frq = new XMLHttpRequest();
-                            frq.open("POST", "", true);
+                            frq.open("POST", window.location.origin + "/webaudio/update", true);
                             frq.setRequestHeader('Content-Type', 'application/octet-stream');
                             frq.setRequestHeader('x-filetype', f.type);
                             frq.send(fr.result);
@@ -605,6 +606,7 @@ document.getElementById("cesiumContainer").ondrop = function(event) {
                 }
 			}
         }
+        /*
             if(dt.items[0] && !(dt.items[0].kind == "file")) {
                 dt.items[0].getAsString(function(str) {
                 //URL validation
@@ -635,6 +637,7 @@ document.getElementById("cesiumContainer").ondrop = function(event) {
                 
             });
         }
+    */
 	}
 }
 

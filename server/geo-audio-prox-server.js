@@ -5,20 +5,11 @@ const jsonfile = require('jsonfile');
 const url = require('url');
 const crypto = require('crypto');
 const bcrypt = require('bcrypt');
-//wow
 
-//babby's first server
-
-const port = 80;
+const port = process.env.npm_package_config_port;
 const max_json = 1e6; //number of bytes allowed per json upload - 1 MB - who's uploading 3000+ sounds anyways?
 const max_audio = 1e7; //number of bytes allowed per audio file upload - 10 MB - people shouldn't bother uploading raw wavs realistically
 const rej_url = ["/json/pass.json", "/json/file_hashes.json", "/js/geo-audio-prox-server.js"];
-
-//We need some way of validating URLs and files and making sure they are all playable on the CLIENT AND SERVER to ensure:
-//a. Somebody can't upload random and possibly dangerous files to the server
-//b. Somebody doesn't try to put a non-sound/non-URL file into the map and then complain that it won't play
-
-//TODO: Restart server if it crashes
 
 //this doesn't explicitly confirm the type; just that it's html5 audio-compatible (returns true/false)
 function verify_audio_file(buffer) { 
@@ -39,7 +30,9 @@ function generate_hash(buffer) {
     return hash.digest('hex');
 }
 
+//Basically deprecated because we're not going to allow people to upload URLs anymore
 function validate_sample_URL_array(sample_arr, index = 0, final_callback) { //Is this too heavy?
+    /*
     if(index == sample_arr.length) {
         final_callback(true);
     }
@@ -63,10 +56,12 @@ function validate_sample_URL_array(sample_arr, index = 0, final_callback) { //Is
         });
         req.end();
     }
+    */
+    final_callback(true);
 }
 
-//Sneaky convolution. Never trust it.
 function validate_attribute_URL_array(attribute_arr, final_callback) {
+    /*
     if(!attribute_arr) {
         final_callback(false);
     }
@@ -78,6 +73,8 @@ function validate_attribute_URL_array(attribute_arr, final_callback) {
         });
         req.end();
     }
+    */
+    final_callback(true);
 }
 
 //Should probably git ignore this eventually
@@ -90,7 +87,11 @@ const requestHandler = (request, response) => {
             response.writeHead(404);
             response.end("Requested resource at " + request.url + "does not exist.");
             return;
-        }} //this should catch any cases where we request a file that does not exist
+        } else {
+            response.writeHead(404); //eh
+            return;
+        }
+                 }
         else if (rej_url.indexOf(request.url) != -1) { //Do not let the client access the actual password json
             response.writeHead(404);
             response.end();
@@ -109,20 +110,24 @@ const requestHandler = (request, response) => {
                 console.error("Requested resource at " + request.url + "does not exist.");
                 response.writeHead(404);
                 response.end("Requested resource at " + request.url + "does not exist.");
+                return;
             }
             else {
                 response.writeHead(200, {'Content-Type' : request.headers["accept"]});
                 response.end();
+                return;
             }
         });
-        
         return;
     }
-    //TODO: 414
-    else if (request.method == "POST") {
+    else if (request.method == "POST" && request.url == "/webaudio/update") { 
+        //Uploading audio files
+        //Right now you don't need any authentication to upload audio files
+        //This probably isn't a good idea
+        
         if(request.headers["content-type"] == 'application/octet-stream') {
-            var data_buf = [];
-            request.on('data', function(chunk) {
+            var data_buf = []; 
+            request.on('data', function(chunk) { 
                 if(Buffer.concat(data_buf).length > max_audio) {
                     response.writeHead(413);
                     response.end("Uploaded data too large");
@@ -131,53 +136,43 @@ const requestHandler = (request, response) => {
                 }
                 data_buf.push(chunk);
             });
+            //Received file
             request.on('end', function() {
-                var rndstr = Math.floor(Math.random()*Date.now()); //lazy PRNG
+                var rndstr = Math.floor(Math.random()*Date.now()); //lazy PRNG for filename
                 data_buf = Buffer.concat(data_buf);
-                jsonfile.readFile("../json/file_hashes.json", function(err, f_hash_obj) {
+                jsonfile.readFile("../json/file_hashes.json", function(err, f_hash_obj) { //File hashes are stored in JSON
                     var fhsh = generate_hash(data_buf);
-                    if(f_hash_obj[fhsh]) {
+                    if(f_hash_obj[fhsh]) { //checks to see if we already have that hash to avoid uploading duplicates
                         response.writeHead(200);
                         console.log("Duplicate file");
                         response.end(f_hash_obj[fhsh]);
                         return;
                     }
                     else {
-                        if(verify_audio_file(data_buf)) {
+                        if(verify_audio_file(data_buf)) { //verify_audio_file checks that the file has the proper magic numbers to be supported by HTML5
+                            var file_format = "";
                         switch (request.headers["x-filetype"]) {
                             case "audio/mp3":
-                                fs.writeFile("../rec_snd/" + rndstr + ".mp3", data_buf, {flags: 'wx'});
-                                response.writeHead(200);
-                                response.end("rec_snd/" + rndstr + ".mp3");
-                                f_hash_obj[fhsh] = "rec_snd/" + rndstr + ".mp3";
-                                jsonfile.writeFile("../json/file_hashes.json", f_hash_obj);
+                                file_format = ".mp3";
                                 break;
                             case "audio/wav":
-                                fs.writeFile("../rec_snd/" + rndstr + ".wav", data_buf, {flags: 'wx'});
-                                response.writeHead(200);
-                                response.end("rec_snd/" + rndstr + ".wav");
-                                f_hash_obj[fhsh] = "rec_snd/" + rndstr + ".wav";
-                                jsonfile.writeFile("../json/file_hashes.json", f_hash_obj);
+                                file_format = ".wav";
                                 break;
                             case "audio/ogg":
-                                fs.writeFile("../rec_snd/" + rndstr + ".ogg", data_buf, {flags: 'wx'});
-                                response.writeHead(200);
-                                response.end("rec_snd/" + rndstr + ".ogg");
-                                f_hash_obj[fhsh] = "rec_snd/" + rndstr + ".ogg";
-                                jsonfile.writeFile("../json/file_hashes.json", f_hash_obj);
+                                file_format = ".ogg";
                                 break;
                             case "audio/flac":
-                                fs.writeFile("../rec_snd/" + rndstr + ".flac", data_buf, {flags: 'wx'});
-                                response.writeHead(200);
-                                response.end("rec_snd/" + rndstr + ".flac");
-                                f_hash_obj[fhsh] = "rec_snd/" + rndstr + ".flac";
-                                jsonfile.writeFile("../json/file_hashes.json", f_hash_obj);
-                                break;
+                                file_format = ".flac";
                             default:
                                 response.writeHead(400);
                                 response.end();
                                 break;
                                }
+                        fs.writeFile("../rec_snd/" + rndstr + file_format, data_buf, {flags: 'wx'}); //This is where the file is written
+                        response.writeHead(200);
+                        response.end("rec_snd/" + rndstr + file_format); //Responds with the local path of the file
+                        f_hash_obj[fhsh] = "rec_snd/" + rndstr + file_format; //Also assigns the local path of the file to a key which is the file's hash
+                        jsonfile.writeFile("../json/file_hashes.json", f_hash_obj);
                     }
                     return;
                     }
@@ -185,6 +180,7 @@ const requestHandler = (request, response) => {
             });
         }
         else {
+            //Automatically assumes if it's not uploading binary data it's uploading json data
             var jsonString = '';
             request.on('data', function(data) {
                 jsonString += data;
@@ -198,11 +194,12 @@ const requestHandler = (request, response) => {
             });
             request.on('end', function() {
                 var np, set_name, password;
+                //Checks authorization header for username/password (in this case the set name is the username)
                 if(request.headers.authorization) {
                     np = atob(request.headers.authorization.replace(/Basic/,'')).split(":");
                     set_name = np[0].replace(/\W/,'');
                     password = np[1];
-                    //Check to see that the name doesn't contain any funky stuff
+                    //Separate jsons will be used for each set so try to limit set names
                     if(/\W/.exec(np[0])) {
                         response.writeHead(400);
                         response.end("Invalid characters detected: Only alphanumerics and underscores allowed in set name");
@@ -215,7 +212,7 @@ const requestHandler = (request, response) => {
                         response.end("Cannot parse request");
                         return;
                     }
-                    //Validate URLs
+                    //Validate URLs - only checks if they're working, not whatever is at them
                     validate_sample_URL_array(json_obj.sample_set, 0, function(state) {
                         if(!state) {
                             console.log("Invalid URLs detected");
@@ -232,7 +229,8 @@ const requestHandler = (request, response) => {
                             response.end("Invalid URLs detected in upload");
                             return;
                         }
-                            if(state) { //>>>>CALLBACKS
+                            //this is a bad way of doing things
+                            if(state) {
                                 if(set_name == "custom") {
                                     console.log("'Custom' name reserved.");
                                     response.writeHead(403);
@@ -242,17 +240,17 @@ const requestHandler = (request, response) => {
                                 //check if we already have that name
                                 jsonfile.readFile("../json/meta.json", function(err, meta_obj) {
                                     if(meta_obj.indexOf(set_name) != -1) {
-                                        //we are updating
-                                        //Check it with password in database (if there's no password then ok the change)
+                                        //We are updating a sound set already in json
+                                        //Check it with password in json (if there's no password then ok the change)
                                         jsonfile.readFile("../json/pass.json", function(err, file_obj) {
                                             if(err) {
                                                 response.writeHead(404);
                                                 response.end();
                                                 return;
                                             }
-                                            //encrypt mister server sid!
+                                            //Using bcrypt to compare password with stored password
                                             bcrypt.compare(password, file_obj[set_name], function(err, res) {
-                                                if ((res == true) || (file_obj[set_name] === undefined)) {
+                                                if ((res == true) || (file_obj[set_name] === undefined)) { //Second expression is for if no password was entered at the set's creation
                                                     //Overwrite JSON file for samples
                                                     jsonfile.writeFile("../json/geo_audio_samples_" + set_name + ".json", json_obj.sample_set);
                                                     //Attributes
@@ -273,16 +271,17 @@ const requestHandler = (request, response) => {
                                         });
                                         } 
                                     else {
-                                        //we are posting.
+                                        //Posting a new set.
                                         console.log("Posting set " + set_name);
-                                        //Input password and name into database
+                                        //Input password and name into json
                                         jsonfile.readFile("../json/pass.json", function(err, file_obj) {
-                                            
-                                            if(password == "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855") {file_obj[set_name] = "";} //sha256 empty string
+                                            //The first expression here is just a sha256 hash for an empty string
+                                            if(password == "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855") {file_obj[set_name] = undefined;} 
                                             else {
                                                 bcrypt.hash(password, 10, function(err, hash) {file_obj[set_name] = hash; jsonfile.writeFile("../json/pass.json", file_obj);});
                                             }
                                         });
+                                        //Name goes here
                                         jsonfile.readFile("../json/meta.json", function(err, file_obj) {
                                             file_obj.push(set_name)
                                             jsonfile.writeFile("../json/meta.json", file_obj);
@@ -303,17 +302,19 @@ const requestHandler = (request, response) => {
             });
         }
     }
-}; //(internally screaming)
+};
 
+//ew
+process.on('uncaughtException', function (err) {
+    console.log(err);
+}); 
 
 const server = http.createServer(requestHandler);
 
-server.listen(port, (err) => {
+server.listen({port : port, host : "0.0.0.0"}, (err) => {
     if(err) {
         return console.log('something bad happened', err)
     }
 
     console.log('server is listening on ' + port)
 });
-
-//node geo-audio-prox-server.js

@@ -1,6 +1,5 @@
 
 *.mp3
 *.ogg
-js/debug.log
-rec_snd/1353628682534.wav
-js/node_modules
+server/debug.log
+server/node_modules

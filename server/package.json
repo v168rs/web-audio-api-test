@@ -3,14 +3,19 @@
   "version": "1.0.0",
   "description": "For geo-audio project",
   "main": "index.js",
+  "config": {
+    "port": "7878"
+  },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "node-debug geo-audio-prox-server.js",
+    "start": "node geo-audio-prox-server.js"
   },
   "author": "FXPal",
   "license": "ISC",
   "dependencies": {
     "atob": "^2.0.3",
     "bcrypt": "^1.0.2",
-    "jsonfile": "^3.0.1"
+    "jsonfile": "^3.0.1",
+    "node-inspector": "^1.1.1"
   }
 }
