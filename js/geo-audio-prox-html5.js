@@ -133,10 +133,9 @@ function find_prox_nodes(range = 2000000, lat, long, max_nodes = 7) {
         }
     });
     rej_arr.forEach(function(index) { //Pause and delete nodes out of range.
-        var samp = geo_buses[index][0];
-        samp.disconnect();
-        if(!samp.mediaElement.paused && !samp.mediaElement.ended && samp.mediaElement.currentTime > 0 && samp.readyState > 2) { //All these checks are necessary. Without them nothing will pause.
-            samp.mediaElement.pause(); samp.mediaElement = null;} //MDN is lying. There is no method of mediaElement called stop(). Hopefully pause() allows them to be garbage collected.
+        geo_buses[index][0].disconnect();
+        //All these checks are necessary. Without them nothing will pause.
+        geo_buses[index][0].mediaElement.pause(); //MDN is lying. There is no method of mediaElement called stop(). Hopefully pause() allows them to be garbage collected.
         //removeChild()
         geo_buses[index][0] = null;
         listening_nodes -= 1;
@@ -170,9 +169,10 @@ function find_prox_nodes(range = 2000000, lat, long, max_nodes = 7) {
                 html5_audio.src = window.location.origin + "/" + path_prefix + "/" + geo_audio_samples[index][0];
                 html5_audio.autoplay = true;
                 html5_audio.loop = true;
+                html5_audio.load();
                 var audio_source = context.createMediaElementSource(html5_audio); //Creates an HTML5 audio element that points to a specific URL.
                 //THE PROMISE IS NEITHER RESOLVING NOR ERROR ARRRGHH GOOGLE STOP
-                audio_source.mediaElement.onload = ()=>{audio_source.mediaElement.play().then(()=>{console.log("Playing " + geo_audio_samples[index][0])}).catch((err)=>{console.err(error)});}
+                audio_source.mediaElement.oncanplay = ()=>{audio_source.mediaElement.play().then(()=>{console.log("Playing " + geo_audio_samples[index][0])}).catch((err)=>{console.err(error)});}
                 
                 //Update billboard
                 geo_buses[index][0] = audio_source;
@@ -338,9 +338,7 @@ function change_sample_bank(audio_selector = "National_Anthems") {
     if(audio_selector != "custom") {
         attribute_xhr.open("GET", window.location.origin + "/" + path_prefix + "/json/geo_audio_attributes_" + cur_audio_selector + ".json");
         attribute_xhr.responseType = "json";
-        attribute_xhr.onload = function() {geo_audio_attributes = attribute_xhr.response;};
-        attribute_xhr.send();
-
+        attribute_xhr.onload = function() {geo_audio_attributes = attribute_xhr.response;
         sample_xhr.open("GET", window.location.origin + "/" + path_prefix + "/json/geo_audio_samples_" + cur_audio_selector + ".json");
         sample_xhr.responseType = "json";
         sample_xhr.onload = function() {
@@ -356,7 +354,8 @@ function change_sample_bank(audio_selector = "National_Anthems") {
             find_prox_nodes(1000000, camera.positionCartographic["latitude"], camera.positionCartographic["longitude"]);
             ready = true;
             };
-        sample_xhr.send(); //This should take the longest so everything setup will go after this
+        sample_xhr.send(); //This should take the longest so everything setup will go after this};
+        attribute_xhr.send();
     }
     else {
         ready = true;
