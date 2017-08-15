@@ -4,7 +4,8 @@
   "description": "For geo-audio project",
   "main": "index.js",
   "config": {
-    "port": "7878"
+    "port": "7878",
+	"pathprefix": "/webaudio"
   },
   "scripts": {
     "test": "node-debug geo-audio-prox-server.js",

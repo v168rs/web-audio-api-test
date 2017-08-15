@@ -18,6 +18,7 @@
 //National anthems (soundfile, lat, long, flagicon) maybe volume too (do something cool like volume proportional to GDP)
 
 //Stored in JSON
+const path_prefix = window.location.pathname.split('/')[1];
 var geo_audio_samples = [],
     ready = false;
 
@@ -27,7 +28,7 @@ var geo_audio_attributes = [];
 //Takes a path/URL to the sample and a callback that receives the arraybuffer data as a parameter. MOSTLY DEPRECATED AND ONLY USED FOR CONVOLUTION REVERB.
 function load_sample(sample, buffer_receiver) {
     var getSound = new XMLHttpRequest();
-    getSound.open("GET", sample, true);
+    getSound.open("GET", window.location.origin + "/" + path_prefix + "/" + sample, true);
     getSound.responseType = "arraybuffer";
     getSound.onload = function () {
         context.decodeAudioData(getSound.response, function(buffer) {
@@ -115,6 +116,7 @@ var ind_arr = [],
 			  
 //Finds nodes within proximity of the viewer based on their latitude and longitude. Range is in m, audio_selector determines the sound set, max_nodes determines the maximum number of nodes.
 function find_prox_nodes(range = 2000000, lat, long, max_nodes = 7) {
+    
 	var geo6c = set_samples_loc(null, lat, long);
     ind_arr = []; //Array containing indices of sounds within range (as within geo_audio_samples)
     dist_arr = []; //Array containing distances of sounds so we can sort them
@@ -165,7 +167,7 @@ function find_prox_nodes(range = 2000000, lat, long, max_nodes = 7) {
                 
                 var html5_audio = new Audio();
                 html5_audio.crossOrigin = "anonymous";
-                html5_audio.src = geo_audio_samples[index][0];
+                html5_audio.src = window.location.origin + "/" + path_prefix + "/" + geo_audio_samples[index][0];
                 html5_audio.autoplay = true;
                 html5_audio.loop = true;
                 var audio_source = context.createMediaElementSource(html5_audio); //Creates an HTML5 audio element that points to a specific URL.
@@ -290,10 +292,10 @@ function create_samples_with_loc(cone_inner = 30, cone_outer = 150){
         
         //Icons
         if (arr[3]) {
-            place_billboard(geo6[0], geo6[1], geo6[2], arr[3], index);
+            place_billboard(geo6[0], geo6[1], geo6[2], window.location.origin + "/" + path_prefix + "/" + arr[3], index);
         }
         else { //Defaults to a picture of a green circle
-            place_billboard(geo6[0], geo6[1], geo6[2], "img/xph.png", index);
+            place_billboard(geo6[0], geo6[1], geo6[2], window.location.origin + "/" + path_prefix + "/img/xph.png", index);
         }
     });
 }
@@ -334,12 +336,12 @@ function change_sample_bank(audio_selector = "National_Anthems") {
     
     //make xhr requests for the relevant sample and attribute sets
     if(audio_selector != "custom") {
-        attribute_xhr.open("GET", "/json/geo_audio_attributes_" + cur_audio_selector + ".json");
+        attribute_xhr.open("GET", window.location.origin + "/" + path_prefix + "/json/geo_audio_attributes_" + cur_audio_selector + ".json");
         attribute_xhr.responseType = "json";
         attribute_xhr.onload = function() {geo_audio_attributes = attribute_xhr.response;};
         attribute_xhr.send();
 
-        sample_xhr.open("GET", "/json/geo_audio_samples_" + cur_audio_selector + ".json");
+        sample_xhr.open("GET", window.location.origin + "/" + path_prefix + "/json/geo_audio_samples_" + cur_audio_selector + ".json");
         sample_xhr.responseType = "json";
         sample_xhr.onload = function() {
             geo_audio_samples = sample_xhr.response;
@@ -364,7 +366,7 @@ function change_sample_bank(audio_selector = "National_Anthems") {
 function load_audio_urls() {
     var geo_audio_sample_urls = [];
     var getMeta = new XMLHttpRequest();
-    getMeta.open("GET", "/json/meta.json", true)
+    getMeta.open("GET", window.location.origin + "/" + path_prefix + "/json/meta.json", true)
     getMeta.onload = function() {
         geo_audio_sample_urls = JSON.parse(getMeta.responseText);
         var selector = document.getElementById("selector");
@@ -536,7 +538,7 @@ function post_set() {
     
     
     stoh(password, function(passhash) {
-        check_xhr.open("POST", window.location.origin + "/webaudio/update", true); //the set name becomes a user name
+        check_xhr.open("POST", window.location.origin + "/" + path_prefix + "/update", true); //the set name becomes a user name
         check_xhr.setRequestHeader("Authorization", "Basic" + btoa(name + ":" + passhash));
         check_xhr.send(JSON.stringify(json_request));
         check_xhr.onload = function() {
@@ -588,7 +590,7 @@ document.getElementById("cesiumContainer").ondrop = function(event) {
 					fr.onload = function() {
                         if(verify_audio_file(fr.result)) {
                             var frq = new XMLHttpRequest();
-                            frq.open("POST", window.location.origin + "/webaudio/update", true);
+                            frq.open("POST", window.location.origin + "/" + path_prefix + "/update", true);
                             frq.setRequestHeader('Content-Type', 'application/octet-stream');
                             frq.setRequestHeader('x-filetype', f.type);
                             frq.send(fr.result);
