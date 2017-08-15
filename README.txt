@@ -13,5 +13,6 @@ This is the current (8/15/17) unencrypted password for the stock sets: $2a$10$Ht
 Additional features that have since been removed included morphing the timbre of the sounds based on data and uploading sounds via URL (Retrieving the audio data for processing requires a cross-origin request, which many URLs will not allow).
 
 Midi.html
-Generation of melodies based on MIDI training data provided by the user via a MIDI controller. Generation is performed via the use of nth-order Markov chains (the next note is determined by the last n notes). 
+Generation of melodies based on MIDI training data provided by the user via a MIDI controller. Generation is performed via the use of nth-order Markov chains (the next note is determined by the last n notes). The order is currently determined by data from the map (higher order correlates with higher temperatures based on mouse location). (You do need to click on a button to start generation. As long as the button is in focus, hitting space will press it without need to move a mouse.)
+
 WIP feature: continuous generation of melodies based on pre-provided sets of MIDI training data that have been given specific “locations”. Based on the location of the user’s cursor, the resulting melody will tend towards generation from different sets of MIDI training data. Currently not very convincing.
