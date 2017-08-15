@@ -131,14 +131,17 @@ function find_prox_nodes(range = 2000000, lat, long, max_nodes = 7) {
         }
     });
     rej_arr.forEach(function(index) { //Pause and delete nodes out of range.
-        var samp = geo_buses[index][0];
-        samp.disconnect();
-        if(!samp.mediaElement.paused && !samp.mediaElement.ended && samp.mediaElement.currentTime > 0 && samp.readyState > 2) { //All these checks are necessary. Without them nothing will pause.
-            samp.mediaElement.pause(); samp.mediaElement = null;} //MDN is lying. There is no method of mediaElement called stop(). Hopefully pause() allows them to be garbage collected.
-        //removeChild()
+        //All these checks are necessary. Without them nothing will pause.
+        //Just remove the conditional and deal with the error
+        geo_buses[index][0].mediaElement.pause(); //my guess is that this is asynchronous
+        geo_buses[index][0].disconnect();
         geo_buses[index][0] = null;
         listening_nodes -= 1;
         viewer.entities.getById(String(index)).billboard.scale = 1;
+        //MDN is lying. There is no method of mediaElement called stop(). Hopefully pause() allows them to be garbage collected.'
+        
+        
+        //removeChild()
     });
     //Sort by proximity (closest first) - Should prevent zooming on a country only to discover you can't hear it
     var arr_keys = Object.keys(dist_arr);
@@ -166,11 +169,12 @@ function find_prox_nodes(range = 2000000, lat, long, max_nodes = 7) {
                 var html5_audio = new Audio(); //ha ha
                 html5_audio.crossOrigin = "anonymous";
                 html5_audio.src = geo_audio_samples[index][0];
-                html5_audio.autoplay = true;
                 html5_audio.loop = true;
+                html5_audio.preload = "none";
+                html5_audio.load();
+                html5_audio.onstalled = ()=>{console.log("Audio is stalled!!!");}; //Why exactly did they think this was a good idea?
                 var audio_source = context.createMediaElementSource(html5_audio); //Creates an HTML5 audio element that points to a specific URL.
-                //THE PROMISE IS NEITHER RESOLVING NOR ERROR ARRRGHH GOOGLE STOP
-                audio_source.mediaElement.onload = ()=>{audio_source.mediaElement.play().then(()=>{console.log("Playing " + geo_audio_samples[index][0])},()=>{console.log("Not playing?");}).catch((err)=>{console.err(error)});}
+                html5_audio.oncanplay = ()=>{console.log("Loaded"); html5_audio.play().then(()=>{console.log("Playing " + geo_audio_samples[index][0])},()=>{console.log("Not playing?");}).catch((err)=>{console.err(error)});}
                 
                 //Update billboard
                 geo_buses[index][0] = audio_source;
@@ -335,26 +339,27 @@ function change_sample_bank(audio_selector = "National_Anthems") {
     if(audio_selector != "custom") {
         attribute_xhr.open("GET", "/json/geo_audio_attributes_" + cur_audio_selector + ".json");
         attribute_xhr.responseType = "json";
-        attribute_xhr.onload = function() {geo_audio_attributes = attribute_xhr.response;};
-        attribute_xhr.send();
-
-        sample_xhr.open("GET", "/json/geo_audio_samples_" + cur_audio_selector + ".json");
-        sample_xhr.responseType = "json";
-        sample_xhr.onload = function() {
-            geo_audio_samples = sample_xhr.response;
-            if(geo_audio_attributes) {
-            change_impulse(geo_audio_attributes[0]);
-            create_samples_with_loc(geo_audio_attributes[1], geo_audio_attributes[2]);
-            }
-            else {
-                change_impulse("snd/imp/impulse.wav");
-                create_samples_with_loc();
-            }
-            find_prox_nodes(1000000, camera.positionCartographic["latitude"], camera.positionCartographic["longitude"]);
-            ready = true;
+        attribute_xhr.onload = function() {
+            geo_audio_attributes = attribute_xhr.response;
+            sample_xhr.open("GET", "/json/geo_audio_samples_" + cur_audio_selector + ".json");
+            sample_xhr.responseType = "json";
+            sample_xhr.onload = function() {
+                geo_audio_samples = sample_xhr.response;
+                if(geo_audio_attributes) {
+                change_impulse(geo_audio_attributes[0]);
+                create_samples_with_loc(geo_audio_attributes[1], geo_audio_attributes[2]);
+                }
+                else {
+                    change_impulse("snd/imp/impulse.wav");
+                    create_samples_with_loc();
+                }
+                find_prox_nodes(1000000, camera.positionCartographic["latitude"], camera.positionCartographic["longitude"]);
+                ready = true;
+                };
+            sample_xhr.send(); //This should take the longest so everything setup will go after this
             };
-        sample_xhr.send(); //This should take the longest so everything setup will go after this
-    }
+            attribute_xhr.send();
+        }
     else {
         ready = true;
     }
@@ -626,7 +631,7 @@ document.getElementById("cesiumContainer").ondrop = function(event) {
                     }
                 }
                 url_val_xhr.onerror = function(err) {
-                    if(confirm("This URL does not allow cross-origin requests. The uploaded file cannot be validated and mayf not function properly. Proceed?")) {
+                    if(confirm("This URL does not allow cross-origin requests. The uploaded file cannot be validated and may not function properly. Proceed?")) {
                         NewSound().execute(str, result);
                     }
                     //Majority of URLs won't allow you to read data so it might not even be worth including this feature.
