@@ -170,7 +170,7 @@ function find_prox_nodes(range = 2000000, lat, long, max_nodes = 7) {
                 html5_audio.loop = true;
                 var audio_source = context.createMediaElementSource(html5_audio); //Creates an HTML5 audio element that points to a specific URL.
                 //THE PROMISE IS NEITHER RESOLVING NOR ERROR ARRRGHH GOOGLE STOP
-                audio_source.mediaElement.onload = ()=>{audio_source.mediaElement.play().then(()=>{console.log("Playing " + geo_audio_samples[index][0])}).catch((err)=>{console.err(error)});}
+                audio_source.mediaElement.onload = ()=>{audio_source.mediaElement.play().then(()=>{console.log("Playing " + geo_audio_samples[index][0])},()=>{console.log("Not playing?");}).catch((err)=>{console.err(error)});}
                 
                 //Update billboard
                 geo_buses[index][0] = audio_source;

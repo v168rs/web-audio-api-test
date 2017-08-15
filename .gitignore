@@ -4,4 +4,5 @@
 js/debug.log
 rec_snd/1353628682534.wav
 js/node_modules
+server/node_modules
 js/npm-debug.log
