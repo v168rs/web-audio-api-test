@@ -305,10 +305,6 @@ const requestHandler = (request, response) => {
 };
 
 //ew
-process.on('uncaughtException', function (err) {
-    console.log(err);
-}); 
-
 const server = http.createServer(requestHandler);
 
 server.listen({port : port, host : "0.0.0.0"}, (err) => {

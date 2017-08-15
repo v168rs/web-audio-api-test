@@ -270,7 +270,7 @@ function create_samples_with_loc(cone_inner = 30, cone_outer = 150){
         var geo_bus = [];
         var panner = context.createPanner();
         panner.panningModel = "HRTF"; //More realistic and supports 3D panning but computationally costly. Cheaper option is "equalpower" which is just L/R.
-        panner.distanceModel = "inverse";
+        panner.distanceModel = "exponential";
         
 		//Positioning
         var geo6 = set_samples_loc(arr);
@@ -433,7 +433,7 @@ function del_sound(id) {
     return arr[0];
 }
 
-var commands = []; //wwew ram
+var commands = [];
 var curr_index = 0; 
 const max_do_l = 32; //last n commands are accessible
 
