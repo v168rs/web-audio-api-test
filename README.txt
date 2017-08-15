@@ -17,7 +17,8 @@ Additional features that have since been removed included morphing the timbre of
 A demo version of geo_prox_html5.html that uses the Web Audio API's AudioBufferSourceNode. Has fewer sounds and features (no sets or editing). AudioBufferSourceNode (despite being described as "lightweight" somewhere in the specification/documentation) likes to leak memory in Chrome so it was removed and replaced with the HTML5 Audio element.
 
 ==midi.html==
-Generation of melodies based on MIDI training data provided by the user via a MIDI controller. Generation is performed via the use of nth-order Markov chains (the next note is determined by the last n notes). The order is currently determined by data from the map (higher order correlates with higher temperatures based on mouse location).
+Generation of melodies based on MIDI training data provided by the user via a MIDI controller. Generation is performed via the use of nth-order Markov chains (the next note is determined by the last n notes). The order is currently determined by data from the map (higher order correlates with higher temperatures based on mouse location). (You do need to click on a button to start generation. As long as the button is in focus, hitting space will press it without need to move a mouse.)
+
 WIP feature: continuous generation of melodies based on pre-provided sets of MIDI training data that have been given specific “locations”. Based on the location of the user’s cursor, the resulting melody will tend towards generation from different sets of MIDI training data. Currently not very convincing. 
 
 ==index.html==
