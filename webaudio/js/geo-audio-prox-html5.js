@@ -169,8 +169,8 @@ function find_prox_nodes(range = 2000000, lat, long, max_nodes = 7) {
                 var html5_audio = new Audio();
                 html5_audio.crossOrigin = "anonymous";
                 html5_audio.src = window.location.origin + "/" + path_prefix + "/" + geo_audio_samples[index][0];
-                html5_audio.autoplay = true;
                 html5_audio.loop = true;
+                html5_audio.preload = "none";
                 html5_audio.load();
                 var audio_source = context.createMediaElementSource(html5_audio); //Creates an HTML5 audio element that points to a specific URL.
                 //THE PROMISE IS NEITHER RESOLVING NOR ERROR ARRRGHH GOOGLE STOP
