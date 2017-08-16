@@ -1,10 +1,11 @@
-function array_equals(arr1, arr2) {
+function array_equals(arr1, arr2) { //function for comparing two arrays
     var rt = true;
     arr1.forEach((el, index) => {if(el != arr2[index]) {rt = false;}});
     arr2.forEach((el, index) => {if(el != arr1[index]) {rt = false;}});
     return rt;
 }
 
+//Module pattern. Actually pretty useless here
 var MIDIm = (function () {
 	//private
 	var midi,
@@ -13,9 +14,10 @@ var MIDIm = (function () {
 	
 	function map(val, min1, max1, min2, max2) {
     return (val - min1) / (max1 - min1) * (max2 - min2) + min2;
-} //from p5js
+} //from p5js - maps a value from one range to another
 	
-	function parse_buffer(option, buffer = midi_buffer) {
+//Parses MIDIm's buffer (containing information about midi events i.e. pitch and time) to an array of states suitable for markov chain
+	function parse_buffer(option, buffer = midi_buffer) { 
 		var p_arr = [],
 			listening_buffer = [];
 		if(option == "note") {
@@ -57,7 +59,7 @@ var MIDIm = (function () {
 		return p_arr;
 	}
 //Polyphony?
-	//Turns an array of recurring states into abstract n-order markov chain objects.
+	//Turns an array of recurring states (given by parse_buffer) into abstract n-order markov chain objects.
 	function markov_parse(array, n, sta) {
 	var ret_dict = [],
 		ret_obj = {};
@@ -76,7 +78,8 @@ var MIDIm = (function () {
 	array.forEach(function(state, index) {
 		if(array[index + n]) {
             
-            //basically we're just mapping multiple states (index to index + n) to indices in the ret_dict however because Javascript doesn't want us to compare arrays with == we have to do it the hard way
+            //basically we're just mapping multiple states (index to index + n) to indices in the ret_dict 
+            //however because Javascript doesn't want us to compare arrays with == we have to do it the hard way
             //meaning element by element
 			var a = array.slice(index, index+n).map(function(obj) {return (sta == "rn") ? ret_dict.findIndex((el)=>{return ((el[1] == obj[1]) && (array_equals(el[0], obj[0])));}) : (ret_dict.indexOf(obj));}); //Abstract to numbers
 			if(!ret_obj[a]) {
@@ -90,14 +93,14 @@ var MIDIm = (function () {
 	return [ret_dict, ret_obj];
 	}
 	
-	//Quantize to the nearest decisecond?
+	//Quantize an array of numbers to steps of n
 	function qra (a = [], n = 50, max = 500) {
 		return a.map(function(x) {
 			return Math.min(max, Math.round(x/n)*n);
 		})
 	}
 	
-	//Group chords from note and rhythm arrays
+	//Group chords from note and rhythm arrays. If the time for a group of notes is 0 (must be done after quantization), assume they are a chord.
 	function chgrp (n = [], r = []) {
 		var ret_arr = [],
 			cur_arr = [];
@@ -114,14 +117,13 @@ var MIDIm = (function () {
 		return ret_arr;
 	}
 	
-	//Quantize to note values
-	
+    //Picks a random element out of an array
 	function pick(array = []) {
 		var rand = Math.random();
 		return array[Math.round(map(rand, 0, 1, 0, array.length - 1))];
 	} //why haven't I done this already
 	
-	//string parse integer array
+	//string -> integer array
 	function spia(str="") {
 			var a = str.split(",");
 			a.map(function(b){return parseInt(b);});
@@ -129,8 +131,10 @@ var MIDIm = (function () {
 	
 	//public
 	return {
+        //public event for MIDI information (to play on web synth)
 		onmidinote: function(msg) {},
 		
+        //initialization of MIDI listener
 		init: function() {
 			if (navigator.requestMIDIAccess) {
 				navigator.requestMIDIAccess({sysex: false}).then(
@@ -155,6 +159,7 @@ var MIDIm = (function () {
 			}
 		},
 		
+        //Empty and release midi buffer
 		rel: function(option) {
 			var rel_arr = [];
 			rel_arr = parse_buffer(option);
@@ -163,50 +168,56 @@ var MIDIm = (function () {
 			return rel_arr;
 		},
         
+        //release buffer grouped into [[chords],times]
         ndchdgrel: function() {
             return chgrp(parse_buffer("note"), parse_buffer("rhythm"));
         },
 		
+        //markov chain of rhythms (time between notes)
 		mrprel: function(n) {
 			return markov_parse(qra(parse_buffer("rhythm")), n, "rhythm");
 		},
 		
+        //markov chain of notes
 		mnprel: function(n) {
 			return markov_parse(parse_buffer("note"), n, "note");
 		},
 		
+        //markov chain of holds (times notes are held)
 		mhprel: function(n) {
 			return markov_parse(qra(parse_buffer("hold")), n, "hold");
 		},
 		
+        //markov chain of chords and rhythms
 		chdgrel: function(n) {
-			return markov_parse(chgrp(parse_buffer("note"), parse_buffer("rhythm")), n, "rn");
+			return markov_parse(this.ndchdgrel(), n, "rn");
 		},
         
         chdgrel_cb: function(n, crb) { //Why did I even make this a module
             return markov_parse(crb, n, "rn");
         },
 		
-		//generate a markov chain
-        //do parse directly in here?
+		//walk a markov chain
 		mwalk: function(markov_arr, ssn = 0, max_rep = 2, parser) {
             console.log(markov_arr);
 			var walk = [],
 				markov_obj = markov_arr[1],
-				opn = Object.getOwnPropertyNames(markov_obj),//"Dictionary array" which we will use to re-translate our output walk into correct values
+				opn = Object.getOwnPropertyNames(markov_obj), //"Dictionary array" which we will use to re-translate our output walk into correct values
 				mad = markov_arr[0],
-				n = markov_obj["~n_order"];
-				opn = opn.filter(function(x) {if((x != "~n_order") && (x != "~state")) return x;});			
-			var	ss = pick(opn),
+				n = markov_obj["~n_order"],
+				opn = opn.filter(function(x) {if((x != "~n_order") && (x != "~state")) return x;}),
+                ss = pick(opn),
 				cs = ss,
 				i = 1;
 			
 			if(ss === undefined) {
 				console.error("No starting state found");
 				return 0;}
+            
 			if(ssn != 0) {
 				ss = opn[ssn];
 			}
+            
 			walk.push(...ss.split(",").map(function(o){return parseInt(o);}));
 			for(i = 0; i < max_rep; i++) {
 				if(markov_obj[cs]) {
@@ -216,10 +227,12 @@ var MIDIm = (function () {
 				}
 				else {
                     if(n == 1) {
+                        //will randomly pick a new state if order is 1
                         console.log("Ran out of combinations; trying new state");
 					    cs = pick(opn)
                     }
                     else if (n > 1) {
+                        //will proceed to lower order if order is above 1
                         console.log("lower order");
                         var temp_arr = parser(n-1);
                         var temp_walk = this.mwalk(temp_arr, 0, 1, parser);
@@ -237,6 +250,7 @@ var MIDIm = (function () {
 MIDIm.init();
 
 var param1 = 0;
+//premade midi buffers
 var buffer_picker = [
     [
         [[55],0.35],[[52],0.2],[[48],0.45],[[52],0.45],[[55],0.5],[[60],0.5],[[62,64],0.25],[[62],0.15],[[60],0.5],[[52],0.2],[[54],0.5],[[55],0.5],[[55],0.3],[[55],0.25],[[62],0.1],[[64],0.45],[[62],0.25],[[60],0.4],[[59],0.5],[[57],0.25],[[59],0.25],[[60],0.45],[[60],0.35],[[55],0.45],[[52],0.5],[[48],0.5],[[55],0.35],[[52],0.15],[[48],0.45],[[52],0.5],[[55],0.5],[[60],0.5],[[62],0.05],[[64],0.35],[[62],0.2],[[60],0.5],[[53],0.5],[[54],0.5],[[55],0.5],[[55],0.5],[[62],0.1],[[64],0.5],[[62],0.25],[[60],0.45],[[59],0.5],[[57],0.25],[[59],0.2],[[60],0.5],[[60],0.4],[[55],0.45],[[52],0.45],[[48],0.5],[[64],0.4],[[64],0.25],[[64],0.45],[[65],0.4],[[67],0.35],[[65],0.1],[[67],0.5],[[65],0.25],[[64],0.25],[[62],0.4],[[64],0.45],[[65],0.5],[[65],0.5],[[65],0.5],[[64],0.5],[[62],0.25],[[60],0.45],[[59],0.5],[[57],0.25],[[59],0.25],[[60],0.45],[[52],0.4],[[54],0.45],[[55],0.5],[[55],0.45],[[60],0.45],[[60],0.5],[[60],0.25],[[59],0.2],[[57],0.45],[[57],0.4],[[57],0.35],[[62],0.4],[[65],0.25],[[64],0.25],[[62],0.2],[[60],0.25],[[60],0.45],[[59],0.5],[[55],0.25],[[55],0.25],[[60],0.5],[[62],0.25],[[64],0.25],[[65],0.25],[[67],0.5],[[60],0.25],[[62],0.25],[[64],0.5],[[65],0.25],[[62],0.5],[[60],0.5],[[55],0.5]
@@ -248,6 +262,8 @@ var buffer_picker = [
         [[60],0.2],[[62],0.2],[[63],0.25],[[55],0.2],[[62],0.2],[[53],0.2],[[51],0.1],[[53],0.2],[[50],0.2],[[48],0.2],[[51],0.25],[[55],0.25],[[60],0.2],[[53],0.25],[[63],0.25],[[62],0.2],[[65],0.2],[[68],0.25],[[60],0.15],[[59],0.05],[[60],0.05],[[59],0.05],[[57],0.25],[[55],0.25],[[59,60],0.2],[[62],0.2],[[65],0.25],[[63],0.25],[[60],0.25],[[55],0.2],[[60],0.2],[[64],0.2],[[60],0.25],[[65],0.25],[[60],0.25],[[67],0.25],[[60],0.25],[[68],0.2],[[60],0.2],[[62],0.25],[[58],0.25],[[53],0.25],[[58],0.2],[[62],0.2],[[58],0.25],[[63],0.25],[[58],0.2],[[65],0.3],[[58],0.25],[[67],0.2],[[58],0.2],[[60],0.45],[[55],0.25],[[56],0.25],[[60],0.3],[[63],0.2],[[58],0.25],[[55],0.25],[[53],0.25],[[55],0.2],[[58],0.25],[[63],0.25],[[56],0.15],[[55],0.25],[[53],0.25],[[55],0.2],[[56],0.25],[[51],0.2],[[51],0.05],[[50],0.2],[[51],0.2],[[53],0.25],[[50],0.25],[[46],0.25],[[44],0.25],[[43],0.3],[[46],0.2],[[51],0.3],[[46],0.2],[[44],0.25],[[51],0.2],[[46],0.25],[[51],0.25],[[48],0.25],[[51],0.2],[[49],0.25],[[51],0.2],[[46],0.25],[[51],0.15],[[51],0.1],[[48],0.25],[[51],0.25],[[49],0.2],[[51],0.25],[[48],0.45],[[51],0.4],[[56],0.1],[[56],0.5],[[53],0.5],[[62],0.5],[[58],0.5],[[67],0.5],[[65],0.25],[[63],0.25],[[62],0.3],[[60],0.2],[[62],0.2],[[63],0.3],[[58],0.25],[[55],0.25],[[58],0.25],[[51],0.5],[[67],0.2],[[68],0.25],[[70],0.2],[[67],0.2],[[70],0.25],[[65],0.2],[[64],0.25],[[62],0.15],[[64],0.05],[[62],0.05],[[60],0.25],[[64],0.25],[[67],0.25],[[70],0.25],[[68],0.3],[[65],0.25],[[61],0.25],[[67],0.3],[[64],0.2],[[60],0.25],[[58],0.25],[[55],0.25],[[56],0.25],[[60],0.25],[[65],0.25],[[57],0.25],[[58],0.25],[[62],0.25],[[65],0.45],[[67],0.25],[[65],0.25],[[67],0.2],[[63],0.25],[[62],0.25],[[60],0.2],[[59],0.25],[[65],0.25],[[63],0.25],[[62],0.25],[[60],0.15],[[63],0.3],[[57],0.2],[[55],0.3],[[54],0.2],[[55],0.25],[[57],0.25],[[54],0.2],[[50],0.25],[[57],0.2],[[62],0.25],[[55],0.25],[[54],0.2],[[60],0.2],[[58],0.25],[[55],0.3],[[48],0.2],[[54],0.3],[[55],0.2],[[57],0.25],[[51],0.2],[[48],0.3],[[46],0.25],[[50],0.2],[[54],0.2],[[55],0.25],[[45],0.2],[[54],0.2],[[55],0.4],[[58],0.1],[[60],0.1],[[58],0.1],[[60],0.1],[[58],0.1],[[60],0.5],[[61],0.2],[[64],0.25],[[60],0.2],[[67],0.25],[[58],0.25],[[56],0.2],[[58],0.25],[[60],0.2],[[56],0.25],[[53],0.25],[[52,50],0.2],[[53],0.25],[[56],0.25],[[59],0.25],[[55],0.2],[[62],0.25],[[53],0.2],[[51],0.25],[[53],0.25],[[55],0.25],[[51],0.25],[[48],0.25],[[47],0.25],[[48],0.3],[[52],0.2],[[54],0.25],[[50],0.25],[[60],0.25],[[48],0.25],[[47],0.2],[[50],0.2],[[53],0.25],[[56],0.25],[[55],0.2],[[59],0.2],[[62],0.2],[[65],0.25],[[63],0.2],[[60],0.25],[[55],0.2],[[59],0.25],[[60],0.2],[[55],0.25],[[51],0.25],[[43],0.2]
     ]
 ];
+
+//locations for each of the buffers
 var buffer_loc = [
     {latitude : 38.8977,
      longitude : -77.0365},
@@ -257,12 +273,13 @@ var buffer_loc = [
     longitude : 10.3156}
 ];
 
+//convert latitudes and longitudes into equirectangular coordinates
 function precal_loc() {
     buffer_loc.forEach((obj)=>{obj.x = (obj.longitude + 180) * 10; obj.y = (90 - obj.latitude) * 10;});
 }
 precal_loc();
 
-//testing function
+//testing function that generates notes/rhythm melody independently based on current buffer
 function mwreg() {
 	var ret_arr = [],
 		not_arr = MIDIm.mwalk(MIDIm.mnprel(param1), 0, parseInt(document.getElementById("gen_rep").value), MIDIm.mnprel),
@@ -275,17 +292,20 @@ function mwreg() {
 	return ret_arr;
 }
 
+//generates polyphonic melody
 function mwrn() {
 	var not_arr = MIDIm.mwalk(MIDIm.chdgrel(param1), 0, parseInt(document.getElementById("gen_rep").value), MIDIm.chdgrel);
 	console.log(not_arr);
 	return not_arr;
 }
 
+//generates melody based on premade buffers
 function mwrncb(cb) { //I feel like higher orders wouldn't work too well
 	var not_arr = MIDIm.mwalk(MIDIm.chdgrel_cb(1, cb), 0, 10, MIDIm.chdgrel_cb);
 	return not_arr;
 }
 
+//the synth sound we will use to voice the melody (the actual system for this is split across mus.js and index-web-audio.js)
 function create_synth(){
     var bus_num = create_new_bus(context.destination);
 	add_osc(bus_num, "sawtooth");
@@ -328,7 +348,7 @@ start_bus(0);
 
 
 
-var wt = [0 , 0, 0],
+var wt = [0 , 0, 0], //weight array for each buffer; this is modified realtime in onmousemove
     interv;
 
 //function for combining two or more different buffers
@@ -342,11 +362,11 @@ function mix_buffers(gran = 100) {
     return ret_buf; //I hope you like arrays with 50k+ elements
 }
 
+//start continuous generation of melody
 function start_generation() {
     var _t = playProgression(0, mwrncb(mix_buffers()));
     return setInterval(()=>{_t = playProgression(0, mwrncb(mix_buffers()))}, _t*1000);
 }
-
 
 document.getElementById("gen").onclick = function() {
 	playNoteSequence(0, 0, mwreg());
@@ -378,7 +398,6 @@ document.getElementById("genp").onclick = function() {
 document.getElementById("clear").onclick = function() {
 	MIDIm.rel("note");
 }
-
 
 function swapImages(new_img_src, new_data_img_src) {
     var display_canvas_context = document.getElementById("display_canvas").getContext("2d"),
@@ -429,8 +448,8 @@ document.getElementById("body").onmousemove = function(e) {
         -Default to 0 if value is 1
         */
 	soundMorph((color_V === 1) ? 0 : map(color_V, 0, 1, 400, 5000), buses[0][1][0].frequency, 0.1);
-    param1 = (color_V === 1) ? param1 : Math.round(map(color_V, 0, 1, 1, 3));
-    wt.forEach((w, i)=>{wt[i] = 1000/Math.sqrt( Math.pow(buffer_loc[i].x - cursorX, 2) + Math.pow(buffer_loc[i].y - cursorY, 2));});
+    param1 = (color_V === 1) ? param1 : Math.round(map(color_V, 0, 1, 1, 3)); //where n-order is actually altered
+    wt.forEach((w, i)=>{wt[i] = 1000/Math.sqrt( Math.pow(buffer_loc[i].x - cursorX, 2) + Math.pow(buffer_loc[i].y - cursorY, 2));}); //get distances for weighting
     }
 
 document.getElementById("data_pic_slider").oninput = function() {

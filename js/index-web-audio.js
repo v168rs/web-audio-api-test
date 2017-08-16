@@ -26,14 +26,15 @@ var context,
 ]
 */
 var bus_count = 0;
-var editor = false;
+var editor = false; //not an editor; just monitors the structure of oscillators, effects, outputs, etc (set to true to look at it)
 
-//Feed in doMarkovSequence from mus.js for sequence
+//Feed in doMarkovSequence from mus.js as parameter sequence
 function playMarkovSequence(melody_bus = 0, melody_osc_num = 0, chord_bus = 1, sequence) {
     playNoteSequence(melody_bus, melody_osc_num, sequence[0]);
     playProgression(chord_bus, sequence[1]);
 }
 
+//function for updating the "editor"
 function update_display() {
     var bus_str = "";
     buses.forEach(function(bus, index) {
@@ -75,6 +76,7 @@ function update_display() {
     document.getElementById("bus_display").innerHTML = bus_str;
 }
 
+//initialize web audio API audio context
 function waa_init() {
     context = new AudioContext();
     var i;
@@ -99,6 +101,7 @@ function load_sample(sample, buffer_receiver) {
     getSound.send();
 }
 
+//new bus (comes with a free oscillator)
 function create_new_bus(dest, osc_put = true) {
     var bus_array_to_push = [];
     var osc_bank = [];
@@ -119,10 +122,12 @@ function create_new_bus(dest, osc_put = true) {
     return buses.indexOf(bus_array_to_push);
 }
 
+//start oscillators/samplers on bus
 function start_bus(bus_num) {
     if(buses[bus_num]) {buses[bus_num][0].forEach(function(osc) {osc.start();});}
 } 
 
+//add an oscillator to a bus
 function add_osc(bus_num, type = "sine") {
     var osc = context.createOscillator();
     osc.frequency.setValueAtTime(220, context.currentTime);
@@ -133,6 +138,7 @@ function add_osc(bus_num, type = "sine") {
 
 //Bus [[source_bank], [effect dry wet], [effect dry wet], send]
 
+//l/r panning
 function add_panner(bus_num, x_pan = 0, loc = 1) {
     var fx = context.createPanner();
     var fx_array = [];
@@ -149,6 +155,7 @@ function add_panner(bus_num, x_pan = 0, loc = 1) {
     return fx;
 }
 
+//add reverb
 function add_convolution(bus_num, impulse = "snd/imp/impulse.wav", loc = 1) {
     var fx = context.createConvolver();
     var fx_array = [];
@@ -179,6 +186,7 @@ function add_sampler(bus_num, sample="snd/ocean_waves.wav") {
 	return sampler;
 }
 
+//I honestly do not remember what this was for
 function add_queuer_sampler(bus_num, sample, temp=false, samples_to_spawn) {
 	var sampler = add_sampler(bus_num, sample);
 	sampler.mediaElement.addEventListener("seeked", function() {
@@ -197,6 +205,7 @@ function add_queuer_sampler(bus_num, sample, temp=false, samples_to_spawn) {
 	return sampler;
 }
 
+//frequency filter
 function add_filter(bus_num, type = "lowpass", frequency = "3000", Q="20", loc = 1) {
     var fx = context.createBiquadFilter();
     var fx_array = [];
@@ -216,7 +225,7 @@ function add_filter(bus_num, type = "lowpass", frequency = "3000", Q="20", loc =
     return fx;
 }
 
-//ADHSR in seconds/levels
+//ADHSR in seconds/levels - Sounds kind of bad
 function add_ADHSR_env(bus_num, attack = 0.2, decay = 0.4, hold = 2, sustain = 0.8, release = 0.5, loc = 1) {
     var fx = context.createGain();
     var fx_array = [];
@@ -235,7 +244,7 @@ function add_ADHSR_env(bus_num, attack = 0.2, decay = 0.4, hold = 2, sustain = 0
 }//3 gains just to keep with the effect architecture. Pretty low-cost. Then an array containing the ADHSR info.
 
 //TODO: waveshaper distortion?
-
+//Change type of oscillator
 function change_osc(bus_num, osc_num, type) {
     buses[bus_num][0][osc_num].type = type;
     return type;
@@ -267,14 +276,17 @@ function add_osc_modulator(bus_num, array_index, target_index, parameter, base_f
     return om;
 }
 
+//Set master gain of bus
 function set_bus_gain(bus_num, value) {
     gains[bus_num].gain.linearRampToValueAtTime(value, context.currentTime + 0.01);
 }
 
+//Set master gain of bus to 0
 function mute_bus(bus_num) {
     set_bus_gain(bus_num, 0)
 }
 
+//Update connections within a bus automatically using array as reference
 function update_bus(bus_num) {
     //console.log("updating bus");
     var i = 0;
@@ -338,7 +350,7 @@ function update_bus(bus_num) {
     }
 }
 
-//% wet.
+//cent is % wet.
 function dry_wet(bus_num, fx_num, cent) {
     console.log(cent);
     buses[bus_num][fx_num][1].gain.setValueAtTime(1-(cent/100),context.currentTime); //dry
@@ -359,7 +371,6 @@ function playNoteSequence(bus_num, osc_num, sequence) {
 }
 
 //Current problem: Not very realtime! May need to make use of SetTimeout() or SetInterval().
-
 function sequenceEnded(){
     console.log("Sequence ended!");
 }
@@ -390,7 +401,7 @@ function triggerADHSR(bus_num, time) {
 }
 
 //Samples?
-//takes midi numbers and delay time from NOW
+//takes midi numbers for note and delay time from NOW
 function playMidiNote(bus_num, osc_num, note, time, sync, ch=false) {
     buses[bus_num][0][osc_num].frequency.setValueAtTime(midiToFreq(note), context.currentTime+time);
 	if(ch == false) {
@@ -410,6 +421,7 @@ function playMidiNote(bus_num, osc_num, note, time, sync, ch=false) {
     }
 } 
 
+//plays a progression of chords [[note, note, note], time]
 function playProgression(bus_num, sequence) {
     var total_length = 0;
     sequence.forEach(function(chord_arr, index)

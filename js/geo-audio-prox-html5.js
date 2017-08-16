@@ -365,6 +365,7 @@ function change_sample_bank(audio_selector = "National_Anthems") {
     }
 }
 
+//Load the names of the sample sets
 function load_audio_urls() {
     var geo_audio_sample_urls = [];
     var getMeta = new XMLHttpRequest();
@@ -573,6 +574,7 @@ document.getElementById("post_btn").addEventListener("click", function() {
 	post_set();
 });
 
+//drag and drop functionality for files
 document.getElementById("cesiumContainer").ondrop = function(event) {
     var c2 = new Cesium.Cartesian2(event.clientX  - document.getElementById("cesiumContainer").offsetLeft, event.clientY  - document.getElementById("cesiumContainer").offsetTop),
         result = {}; //stores ellipsoid coordinates of mouse location

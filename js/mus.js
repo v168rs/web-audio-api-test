@@ -319,6 +319,7 @@ function generateMarkovChord() {
     return new_chord;
 }
 
+//walks markov chain, generating a melody and chord progression
 function doMarkovSequence(root = 51, scale = "maj_scale", octaves = 2, phrase_length = 8, clean = true, tone_anchor = 2, starting_chord = "I", num_phrases, duration) {
     cur_chord = starting_chord;
     var melody = [],
@@ -357,6 +358,8 @@ function doMarkovSequence(root = 51, scale = "maj_scale", octaves = 2, phrase_le
 
 //Available modulations? Music comes from repetition
 //Separate rhythm repetition from melody repetition somehow? Rhythmic repetition is much more common
+
+//Experimental function for repeating phrases
 function doMetaSequence(root = 53, scale = "maj_scale", octaves = 2, phrase_length = 8, clean = true, tone_anchor = 2, starting_chord = "I", num_phrases = 12, duration = 48, melody_bus = 0, melody_osc_num = 0, chord_bus = 1) {
     //Record index and contents of LAST UNIQUE PHRASE so we don't keep repeating the same thing over and over
     var meta_sequence = [],
@@ -392,7 +395,7 @@ function doMetaSequence(root = 53, scale = "maj_scale", octaves = 2, phrase_leng
             //console.log("grabbing " + cur_opt[1] " phrases from position " + i+cur_opt[0]);
             for(k = 0; k <= cur_opt[1]; k++) {
                 push_phrase = push_phrase.concat(meta_sequence[i+cur_opt[0]+k]);
-            } //oh god it's asynchronous what have I done.
+            }
         }
         meta_sequence.push(push_phrase);
         i++; //Increment!
