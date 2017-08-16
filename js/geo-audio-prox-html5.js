@@ -133,13 +133,15 @@ function find_prox_nodes(range = 2000000, lat, long, max_nodes = 7) {
         }
     });
     rej_arr.forEach(function(index) { //Pause and delete nodes out of range.
-        geo_buses[index][0].disconnect();
-        //All these checks are necessary. Without them nothing will pause.
-        geo_buses[index][0].mediaElement.pause(); //MDN is lying. There is no method of mediaElement called stop(). Hopefully pause() allows them to be garbage collected.
+        if(geo_buses[index][0].mediaElement) {
+            geo_buses[index][0].mediaElement.pause(); //my guess is that this is asynchronous
+            //MDN is lying. There is no method of mediaElement called stop(). Hopefully pause() allows them to be garbage collected.
+            geo_buses[index][0].disconnect();
+            geo_buses[index][0] = null;
+            listening_nodes -= 1;
+            viewer.entities.getById(String(index)).billboard.scale = 1;
+        }
         //removeChild()
-        geo_buses[index][0] = null;
-        listening_nodes -= 1;
-        viewer.entities.getById(String(index)).billboard.scale = 1;
     });
     //Sort by proximity (closest first) - Should prevent zooming on a country only to discover you can't hear it
     var arr_keys = Object.keys(dist_arr);
