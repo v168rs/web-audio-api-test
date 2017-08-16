@@ -4,7 +4,6 @@ const atob = require('atob');
 const jsonfile = require('jsonfile');
 const url = require('url');
 const crypto = require('crypto');
-const bcrypt = require('bcrypt');
 
 const port = process.env.npm_package_config_port;
 const pathPrefix = process.env.npm_package_config_pathprefix;
@@ -83,7 +82,7 @@ const requestHandler = (request, response) => {
     if(request.method == "GET") {
         fs.readFile("../" + decodeURI(request.url), (err, data) => {
         if (err) {if (err.code == 'ENOENT') {
-            console.error("Requested resource at" + request.url + "does not exist.");
+            console.error("Requested resource at " + request.url + "does not exist.");
             response.writeHead(404);
             response.end("Requested resource at " + request.url + "does not exist.");
             return;
@@ -257,26 +256,23 @@ const requestHandler = (request, response) => {
                                                 response.end();
                                                 return;
                                             }
-                                            //Using bcrypt to compare password with stored password
-                                            bcrypt.compare(password, file_obj[set_name], function(err, res) {
-                                                if ((res == true) || (file_obj[set_name] === undefined)) { //Second expression is for if no password was entered at the set's creation
-                                                    //Overwrite JSON file for samples
-                                                    jsonfile.writeFile(root + pathPrefix + "/json/geo_audio_samples_" + set_name + ".json", json_obj.sample_set);
-                                                    //Attributes
-                                                    jsonfile.writeFile(root + pathPrefix + "/json/geo_audio_attributes_" + set_name + ".json", json_obj.attributes);
-                                                    console.log("Updating set " + set_name);
-                                                    response.writeHead(200);
-                                                    response.write("OK");
-                                                    response.end();
-                                                    return;
-                                                }
-                                                else {
-                                                    response.writeHead(401);
-                                                    response.write("Incorrect password.");
-                                                    response.end();
-                                                    return;
-                                                }    
-                                            });
+                                            if ((generate_hash(password) == file_obj[set_name]) || (file_obj[set_name] === undefined)) { //Second expression is for if no password was entered at the set's creation
+                                                //Overwrite JSON file for samples
+                                                jsonfile.writeFile(root + pathPrefix + "/json/geo_audio_samples_" + set_name + ".json", json_obj.sample_set);
+                                                //Attributes
+                                                jsonfile.writeFile(root + pathPrefix + "/json/geo_audio_attributes_" + set_name + ".json", json_obj.attributes);
+                                                console.log("Updating set " + set_name);
+                                                response.writeHead(200);
+                                                response.write("OK");
+                                                response.end();
+                                                return;
+                                            }
+                                            else {
+                                                response.writeHead(401);
+                                                response.write("Incorrect password.");
+                                                response.end();
+                                                return;
+                                            }    
                                         });
                                         } 
                                     else {
@@ -287,7 +283,8 @@ const requestHandler = (request, response) => {
                                             //The first expression here is just a sha256 hash for an empty string
                                             if(password == "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855") {file_obj[set_name] = undefined;} 
                                             else {
-                                                bcrypt.hash(password, 10, function(err, hash) {file_obj[set_name] = hash; jsonfile.writeFile(root + pathPrefix + "/json/pass.json", file_obj);});
+                                                file_obj[set_name] = generate_hash(password);
+                                                jsonfile.writeFile(root + pathPrefix + "/json/pass.json", file_obj);
                                             }
                                         });
                                         //Name goes here
