@@ -97,7 +97,15 @@ const requestHandler = (request, response) => {
             return;
         }
         else {
-            response.writeHead(200, {'Content-Type' : request.headers["accept"]});
+            if(/\.html/.exec(request.url)) {
+                response.writeHead(200, {'Content-Type' : "text/html"});
+            }
+            else if (/\.json/.exec(request.url)) {
+                response.writeHead(200, {'Content-Type' : "application/json"});
+                     }
+            else {
+                response.writeHead(200, {'Content-Type' : request.headers["accept"]});
+            }
             response.end(data);
             return;
         } 

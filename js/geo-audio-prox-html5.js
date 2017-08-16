@@ -133,11 +133,14 @@ function find_prox_nodes(range = 2000000, lat, long, max_nodes = 7) {
     rej_arr.forEach(function(index) { //Pause and delete nodes out of range.
         //All these checks are necessary. Without them nothing will pause.
         //Just remove the conditional and deal with the error
-        geo_buses[index][0].mediaElement.pause(); //my guess is that this is asynchronous
-        geo_buses[index][0].disconnect();
-        geo_buses[index][0] = null;
-        listening_nodes -= 1;
-        viewer.entities.getById(String(index)).billboard.scale = 1;
+        if(geo_buses[index][0].mediaElement) {
+            geo_buses[index][0].mediaElement.pause(); //my guess is that this is asynchronous
+            geo_buses[index][0].disconnect();
+            geo_buses[index][0] = null;
+            listening_nodes -= 1;
+            viewer.entities.getById(String(index)).billboard.scale = 1;
+        }
+        
         //MDN is lying. There is no method of mediaElement called stop(). Hopefully pause() allows them to be garbage collected.'
         
         
@@ -278,7 +281,7 @@ function create_samples_with_loc(cone_inner = 30, cone_outer = 150){
 		//Positioning
         var geo6 = set_samples_loc(arr);
         panner.setPosition(geo6[0], geo6[1], geo6[2]);
-        panner.refDistance = 700; //Base distance unit for panner calculations
+        panner.refDistance = 7e4; //Base distance unit for panner calculations
         
         //Orientation
         panner.setOrientation(geo6[3], geo6[4], geo6[5]);
