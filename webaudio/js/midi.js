@@ -314,7 +314,7 @@ function create_synth(){
     
 	add_osc(bus_num, "sine");
 	add_convolution(bus_num, "snd/imp/impulse.wav");
-	add_ADHSR_env(bus_num, 0.3, 0.2, 0.05, 0, 0.5);
+	add_ADHSR_env(bus_num, 0, 0.2, 0.05, 0.5, 0.5);
 	add_filter(bus_num)
 	dry_wet(0, 1, 100);
 	

@@ -8,6 +8,7 @@ const bcrypt = require('bcrypt');
 
 const port = process.env.npm_package_config_port;
 const pathPrefix = process.env.npm_package_config_pathprefix;
+const root = "../";
 const max_json = 1e6; //number of bytes allowed per json upload - 1 MB - who's uploading 3000+ sounds anyways?
 const max_audio = 1e7; //number of bytes allowed per audio file upload - 10 MB - people shouldn't bother uploading raw wavs realistically
 const rej_url = ["/json/pass.json", "/json/file_hashes.json", "/js/geo-audio-prox-server.js"];
@@ -80,7 +81,7 @@ function validate_attribute_URL_array(attribute_arr, final_callback) {
 
 const requestHandler = (request, response) => {
     if(request.method == "GET") {
-        fs.readFile(decodeURI(request.url), (err, data) => {
+        fs.readFile("../" + decodeURI(request.url), (err, data) => {
         if (err) {if (err.code == 'ENOENT') {
             console.error("Requested resource at" + request.url + "does not exist.");
             response.writeHead(404);
@@ -113,7 +114,7 @@ const requestHandler = (request, response) => {
         });
     }
     if(request.method == "HEAD") { 
-        fs.readFile(decodeURI(request.url), (err, data) => {
+        fs.readFile("../" + decodeURI(request.url), (err, data) => {
             if(err && (err.code == 'ENOENT')) {
                 console.error("Requested resource at " + request.url + "does not exist.");
                 response.writeHead(404);
@@ -148,7 +149,7 @@ const requestHandler = (request, response) => {
             request.on('end', function() {
                 var rndstr = Math.floor(Math.random()*Date.now()); //lazy PRNG for filename
                 data_buf = Buffer.concat(data_buf);
-                jsonfile.readFile(pathPrefix + "/json/file_hashes.json", function(err, f_hash_obj) { //File hashes are stored in JSON
+                jsonfile.readFile(root + pathPrefix + "/json/file_hashes.json", function(err, f_hash_obj) { //File hashes are stored in JSON
                     var fhsh = generate_hash(data_buf);
                     if(f_hash_obj[fhsh]) { //checks to see if we already have that hash to avoid uploading duplicates
                         response.writeHead(200);
@@ -176,11 +177,11 @@ const requestHandler = (request, response) => {
                                 response.end();
                                 break;
                                }
-                        fs.writeFile(pathPrefix + "/rec_snd/" + rndstr + file_format, data_buf, {flags: 'wx'}); //This is where the file is written
+                        fs.writeFile(root + pathPrefix + "/rec_snd/" + rndstr + file_format, data_buf, {flags: 'wx'}); //This is where the file is written
                         response.writeHead(200);
                         response.end("rec_snd/" + rndstr + file_format); //Responds with the local path of the file
                         f_hash_obj[fhsh] = "rec_snd/" + rndstr + file_format; //Also assigns the local path of the file to a key which is the file's hash
-                        jsonfile.writeFile(pathPrefix + "/json/file_hashes.json", f_hash_obj);
+                        jsonfile.writeFile(root + pathPrefix + "/json/file_hashes.json", f_hash_obj);
                     }
                     return;
                     }
@@ -246,11 +247,11 @@ const requestHandler = (request, response) => {
                                     return;
                                 }
                                 //check if we already have that name
-                                jsonfile.readFile(pathPrefix + "/json/meta.json", function(err, meta_obj) {
+                                jsonfile.readFile(root + pathPrefix + "/json/meta.json", function(err, meta_obj) {
                                     if(meta_obj.indexOf(set_name) != -1) {
                                         //We are updating a sound set already in json
                                         //Check it with password in json (if there's no password then ok the change)
-                                        jsonfile.readFile(pathPrefix + "/json/pass.json", function(err, file_obj) {
+                                        jsonfile.readFile(root + pathPrefix + "/json/pass.json", function(err, file_obj) {
                                             if(err) {
                                                 response.writeHead(500);
                                                 response.end();
@@ -260,9 +261,9 @@ const requestHandler = (request, response) => {
                                             bcrypt.compare(password, file_obj[set_name], function(err, res) {
                                                 if ((res == true) || (file_obj[set_name] === undefined)) { //Second expression is for if no password was entered at the set's creation
                                                     //Overwrite JSON file for samples
-                                                    jsonfile.writeFile(pathPrefix + "/json/geo_audio_samples_" + set_name + ".json", json_obj.sample_set);
+                                                    jsonfile.writeFile(root + pathPrefix + "/json/geo_audio_samples_" + set_name + ".json", json_obj.sample_set);
                                                     //Attributes
-                                                    jsonfile.writeFile(pathPrefix + "/json/geo_audio_attributes_" + set_name + ".json", json_obj.attributes);
+                                                    jsonfile.writeFile(root + pathPrefix + "/json/geo_audio_attributes_" + set_name + ".json", json_obj.attributes);
                                                     console.log("Updating set " + set_name);
                                                     response.writeHead(200);
                                                     response.write("OK");
@@ -282,22 +283,22 @@ const requestHandler = (request, response) => {
                                         //Posting a new set.
                                         console.log("Posting set " + set_name);
                                         //Input password and name into json
-                                        jsonfile.readFile(pathPrefix + "/json/pass.json", function(err, file_obj) {
+                                        jsonfile.readFile(root + pathPrefix + "/json/pass.json", function(err, file_obj) {
                                             //The first expression here is just a sha256 hash for an empty string
                                             if(password == "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855") {file_obj[set_name] = undefined;} 
                                             else {
-                                                bcrypt.hash(password, 10, function(err, hash) {file_obj[set_name] = hash; jsonfile.writeFile(pathPrefix + "/json/pass.json", file_obj);});
+                                                bcrypt.hash(password, 10, function(err, hash) {file_obj[set_name] = hash; jsonfile.writeFile(root + pathPrefix + "/json/pass.json", file_obj);});
                                             }
                                         });
                                         //Name goes here
-                                        jsonfile.readFile(pathPrefix + "/json/meta.json", function(err, file_obj) {
+                                        jsonfile.readFile(root + pathPrefix + "/json/meta.json", function(err, file_obj) {
                                             file_obj.push(set_name)
-                                            jsonfile.writeFile(pathPrefix + "/json/meta.json", file_obj);
+                                            jsonfile.writeFile(root + pathPrefix + "/json/meta.json", file_obj);
                                         });
                                         //Create new JSON file for samples
-                                        jsonfile.writeFile(pathPrefix + "/json/geo_audio_samples_" + set_name + ".json", json_obj.sample_set, {flag: "wx"});
+                                        jsonfile.writeFile(root + pathPrefix + "/json/geo_audio_samples_" + set_name + ".json", json_obj.sample_set, {flag: "wx"});
                                         //Attributes
-                                        jsonfile.writeFile(pathPrefix + "/json/geo_audio_attributes_" + set_name + ".json", json_obj.attributes, {flag: "wx"});
+                                        jsonfile.writeFile(root + pathPrefix + "/json/geo_audio_attributes_" + set_name + ".json", json_obj.attributes, {flag: "wx"});
                                         response.writeHead(200);
                                         response.end();
                                         return;

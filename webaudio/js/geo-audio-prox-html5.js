@@ -357,6 +357,7 @@ function change_sample_bank(audio_selector = "National_Anthems") {
             ready = true;
             };
         sample_xhr.send(); //This should take the longest so everything setup will go after this};
+        }
         attribute_xhr.send();
     }
     else {

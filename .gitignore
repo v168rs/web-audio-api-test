@@ -2,3 +2,5 @@ js/node_modules
 server/debug.log
 server/node_modules
 js/npm-debug.log
+webaudio/server/node_modules
+webaudio/js/node_modules
