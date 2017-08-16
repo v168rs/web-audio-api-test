@@ -5,8 +5,8 @@ const jsonfile = require('jsonfile');
 const url = require('url');
 const crypto = require('crypto');
 
-const port = process.env.npm_package_config_port;
-const pathPrefix = process.env.npm_package_config_pathprefix;
+const port = process.env.npm_package_config_port || 8080;
+const pathPrefix = process.env.npm_package_config_pathprefix || '/webaudio';
 const root = "../";
 const max_json = 1e6; //number of bytes allowed per json upload - 1 MB - who's uploading 3000+ sounds anyways?
 const max_audio = 1e7; //number of bytes allowed per audio file upload - 10 MB - people shouldn't bother uploading raw wavs realistically
@@ -32,7 +32,7 @@ function generate_hash(buffer) {
 }
 
 //Basically deprecated because we're not going to allow people to upload URLs anymore
-function validate_sample_URL_array(sample_arr, index = 0, final_callback) { //Is this too heavy?
+function validate_sample_URL_array(sample_arr, index, final_callback) { //Is this too heavy?
     /*
     if(index == sample_arr.length) {
         final_callback(true);

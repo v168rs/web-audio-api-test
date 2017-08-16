@@ -4,7 +4,7 @@
   "description": "For geo-audio project",
   "main": "index.js",
   "config": {
-    "port": "7878",
+    "port": "8080",
 	"pathprefix": "/webaudio"
   },
   "scripts": {
@@ -15,8 +15,6 @@
   "license": "ISC",
   "dependencies": {
     "atob": "^2.0.3",
-    "bcrypt": "^1.0.2",
-    "jsonfile": "^3.0.1",
-    "node-inspector": "^1.1.1"
+    "jsonfile": "^3.0.1"
   }
 }
