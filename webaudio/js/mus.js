@@ -35,7 +35,6 @@ function midiToFreq(a = 69) {
 }
 
 function midiToNote(a = 69) {
-    
     return note_names[a % 12] + Math.floor(a / 12);
 }
 
@@ -74,7 +73,7 @@ var scales = { chromatic : [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
            };
 
 //Returns array of midi notes
-function getScaleFromRoot(scale, midi_root, octaves) {
+function getScaleFromRoot(scale, midi_root, octaves = 1) {
     var scale_return = [],
         last_note = 0;
     var k;
@@ -89,6 +88,79 @@ function getScaleFromRoot(scale, midi_root, octaves) {
     }
     scale_return.push(midi_root + 12*k); //add the last note
     return scale_return;
+}
+
+//stats of an object of properties whose names are values and whose values are indices
+function objectStat(object) {
+    var sum = 0,
+        marr = [],
+        nn = 0;
+    Object.getOwnPropertyNames(object).forEach((name, index)=>{
+        marr.push(object[name]); 
+        for(var i = 0; i < object[name]; i++){sum += parseInt(name); if(name != 0) {nn++;}}
+    }); //O(N^2) but thankfully not on anything too big
+    return {sum : sum, num : nn, mean : (sum/nn), max : Object.getOwnPropertyNames(object)[marr.findIndex((val)=>{return val == Math.max(...marr);})]};
+}
+
+//Statistically brute-force analyze an array of notes or progression to determine the key it is likely in (returns other information as well)
+function midiArrayToKey(arr, base = true) {
+    var ret_obj = {},
+        robj = {},
+        mfrqobj = {};
+    if(arr.find((el)=>{return el instanceof Array})) {
+        var temp_arr = [];
+        arr.forEach((cr)=>{temp_arr.push(...cr[0])});
+        arr = temp_arr;
+    }
+    arr.forEach((not, ind)=>{
+        mfrqobj[not % 12] = (mfrqobj[not % 12] === undefined) ? 1 : ++mfrqobj[not % 12];
+    });
+    ret_obj["mfrqobj"] = mfrqobj;
+    if(base) {
+        for(var i = 0; i <= 11; i++) { //for more sophisticated things we could test for other scales
+            var comp_obj = midiArrayToKey(getScaleFromRoot("maj_scale", i), false)["mfrqobj"], //This assumes an almost uniform scale profile with emphasis on the tonic. This is not realistic.
+                mfrqst = objectStat(mfrqobj),
+                csst = objectStat(comp_obj),
+                num_sum = 0,
+                den_sumx = 0,
+                den_sumy = 0,
+                den_sum = 0, //not dim sum but close
+                R = 0;
+            for(var j = 0; j <= 11; j++) { //I didn't take statistics so bear with me
+                mfrqobj[j] = (mfrqobj[j] === undefined) ? 0 : mfrqobj[j];
+                comp_obj[j] = (comp_obj[j] === undefined) ? 0 : comp_obj[j];
+                num_sum += (mfrqobj[j] - mfrqst["mean"])*(comp_obj[j] - csst["mean"]);
+                den_sumx += Math.pow((mfrqobj[j] - mfrqst["mean"]), 2);
+                den_sumy += Math.pow((comp_obj[j] - csst["mean"]), 2);
+            }
+            den_sum += Math.sqrt(den_sumx*den_sumy);
+            R = num_sum/den_sum;
+            robj[i] = R;
+        }
+        ret_obj["robj"] = robj;
+        ret_obj["key"] = /\w*[^0]/.exec(midiToNote(objectStat(robj)["max"]));
+        ret_obj["keyn"] = objectStat(robj)["max"];
+        console.log("Likely in the key of " + ret_obj["key"]);
+    }
+    return ret_obj;
+}
+//It isn't right all of the time but it's probably good enough for pop music
+
+var tonal_mask = {
+    major_to_minor: [0, 0, 0, 0, -1, 0, 0, 0, 0, -1, 0, -1],
+    minor_to_major: [0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 1, 0],
+    up_3_minor: [-1, 0, -1, 0, -1, 0, 0, -1, 0, -1, 0, -1]
+}
+
+//well that was simpler than expected
+function applyTonalMask(arr, mask, offset = midiArrayToKey(arr)["keyn"]) {
+    if(arr.find((el)=>{return el instanceof Array})) {
+        arr.forEach((cr)=>{cr[0] = applyTonalMask(cr[0], mask, offset)});
+    }
+    else {
+        return arr.map((note)=>{return note + mask[(note - offset) % 12];});
+    }
+    return arr;
 }
 
 //Simple chords and inversions - Labeled in the key of C for simplicity. Inversions don't skip keys; they're all in order (for now).

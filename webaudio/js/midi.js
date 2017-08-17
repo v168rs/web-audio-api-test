@@ -249,7 +249,9 @@ var MIDIm = (function () {
 })();
 MIDIm.init();
 
-var param1 = 0;
+var param1 = 0, //order
+    param2 = 1, //tempo factor
+    param3 = 1000; //interval factor (just for fun)
 //premade midi buffers
 var buffer_picker = [
     [
@@ -295,7 +297,6 @@ function mwreg() {
 //generates polyphonic melody
 function mwrn() {
 	var not_arr = MIDIm.mwalk(MIDIm.chdgrel(param1), 0, parseInt(document.getElementById("gen_rep").value), MIDIm.chdgrel);
-	console.log(not_arr);
 	return not_arr;
 }
 
@@ -364,8 +365,8 @@ function mix_buffers(gran = 100) {
 
 //start continuous generation of melody
 function start_generation() {
-    var _t = playProgression(0, mwrncb(mix_buffers()));
-    return setInterval(()=>{_t = playProgression(0, mwrncb(mix_buffers()))}, _t*1000);
+    var _t = playProgression(0, mwrncb(mix_buffers()).map((arr)=>{return [arr[0],arr[1]/param2];}));
+    return setInterval(()=>{_t = playProgression(0, mwrncb(mix_buffers()).map((arr)=>{return [arr[0],arr[1]/param2];}));}, _t*param3);
 }
 
 document.getElementById("gen").onclick = function() {
@@ -449,6 +450,7 @@ document.getElementById("body").onmousemove = function(e) {
         */
 	soundMorph((color_V === 1) ? 0 : map(color_V, 0, 1, 400, 5000), buses[0][1][0].frequency, 0.1);
     param1 = (color_V === 1) ? param1 : Math.round(map(color_V, 0, 1, 1, 3)); //where n-order is actually altered
+    param2 = (color_V === 1) ? param2 : Math.round(map(color_V, 0, 1, 1, 3));
     wt.forEach((w, i)=>{wt[i] = 1000/Math.sqrt( Math.pow(buffer_loc[i].x - cursorX, 2) + Math.pow(buffer_loc[i].y - cursorY, 2));}); //get distances for weighting
     }
 
