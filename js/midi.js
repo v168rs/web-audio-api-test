@@ -297,7 +297,6 @@ function mwreg() {
 //generates polyphonic melody
 function mwrn() {
 	var not_arr = MIDIm.mwalk(MIDIm.chdgrel(param1), 0, parseInt(document.getElementById("gen_rep").value), MIDIm.chdgrel);
-	console.log(not_arr);
 	return not_arr;
 }
 
