@@ -164,7 +164,7 @@ var MIDIm = (function () {
 			var rel_arr = [];
 			rel_arr = parse_buffer(option);
 			midi_buffer = [];
-			
+			 
 			return rel_arr;
 		},
         
@@ -199,7 +199,7 @@ var MIDIm = (function () {
 		
 		//walk a markov chain
 		mwalk: function(markov_arr, ssn = 0, max_rep = 2, parser) {
-            console.log(markov_arr);
+            //where do we modify
 			var walk = [],
 				markov_obj = markov_arr[1],
 				opn = Object.getOwnPropertyNames(markov_obj), //"Dictionary array" which we will use to re-translate our output walk into correct values
@@ -251,7 +251,8 @@ MIDIm.init();
 
 var param1 = 0, //order
     param2 = 1, //tempo factor
-    param3 = 1000; //interval factor (just for fun)
+    param3 = 1000, //interval factor (just for fun)
+    param4 = 0; //mask factor
 //premade midi buffers
 var buffer_picker = [
     [
@@ -347,8 +348,6 @@ start_bus(0);
 
 //Document stuff
 
-
-
 var wt = [0 , 0, 0], //weight array for each buffer; this is modified realtime in onmousemove
     interv;
 
@@ -362,11 +361,11 @@ function mix_buffers(gran = 100) {
     });
     return ret_buf; //I hope you like arrays with 50k+ elements
 }
-
+//
 //start continuous generation of melody
-function start_generation() {
-    var _t = playProgression(0, mwrncb(mix_buffers()).map((arr)=>{return [arr[0],arr[1]/param2];}));
-    return setInterval(()=>{_t = playProgression(0, mwrncb(mix_buffers()).map((arr)=>{return [arr[0],arr[1]/param2];}));}, _t*param3);
+function cycle_generation() {
+    var _t = playProgression(0, applyTonalMask(mwrncb(mix_buffers()).map((arr)=>{return [arr[0],arr[1]/param2];}),tonal_mask[Object.getOwnPropertyNames(tonal_mask)[param4]]));
+    return setTimeout(()=>{cycle_generation()}, _t*param3); //wait this shouldn't be an interval
 }
 
 document.getElementById("gen").onclick = function() {
@@ -379,7 +378,7 @@ document.getElementById("genrn").onclick = function() {
 
 document.getElementById("genc").onclick = function() {
 	if(!interv) {
-        interv = start_generation();
+        interv = cycle_generation();
     }
     else {
         alert("Already playing");
@@ -388,7 +387,7 @@ document.getElementById("genc").onclick = function() {
 
 document.getElementById("genp").onclick = function() {
     if(interv) {
-        clearInterval(interv);
+        clearTimeout(interv);
         interv = null;
     }
     else {
@@ -451,6 +450,7 @@ document.getElementById("body").onmousemove = function(e) {
 	soundMorph((color_V === 1) ? 0 : map(color_V, 0, 1, 400, 5000), buses[0][1][0].frequency, 0.1);
     param1 = (color_V === 1) ? param1 : Math.round(map(color_V, 0, 1, 1, 3)); //where n-order is actually altered
     param2 = (color_V === 1) ? param2 : Math.round(map(color_V, 0, 1, 1, 3));
+    param4 = (color_V === 1) ? param4 : Math.round(map(color_V, 0, 1, 0, 2));
     wt.forEach((w, i)=>{wt[i] = 1000/Math.sqrt( Math.pow(buffer_loc[i].x - cursorX, 2) + Math.pow(buffer_loc[i].y - cursorY, 2));}); //get distances for weighting
     }
 
